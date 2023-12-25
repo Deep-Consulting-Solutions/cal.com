@@ -405,6 +405,7 @@ export default class ZohoCalendarService implements Calendar {
         },
       ],
       location: event.location ? getLocation(event) : undefined,
+      notify_attendee: 0,
     };
 
     return zohoEvent;
