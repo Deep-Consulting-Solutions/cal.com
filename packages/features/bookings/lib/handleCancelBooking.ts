@@ -305,7 +305,7 @@ async function handler(req: CustomRequest) {
     sendPayload(webhook.secret, eventTrigger, new Date().toISOString(), webhook, {
       ...evt,
       ...eventTypeInfo,
-      metadata: { a: req.query.metadata as string },
+      metadata: req.body.metadata as { [key: string]: string },
       // others: req.query.metadata as string,
       status: "CANCELLED",
       smsReminderNumber: bookingToDelete.smsReminderNumber || undefined,
@@ -797,7 +797,7 @@ async function handleSeatedEventCancellation(
     sendPayload(webhook.secret, WebhookTriggerEvents.BOOKING_CANCELLED, new Date().toISOString(), webhook, {
       ...evt,
       ...eventTypeInfo,
-      metadata: { a: req.query.metadata as string },
+      metadata: req.body.metadata as { [key: string]: string },
       // others: req.query.metadata as string,
       status: "CANCELLED",
       smsReminderNumber: bookingToDelete.smsReminderNumber || undefined,
