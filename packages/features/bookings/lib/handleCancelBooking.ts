@@ -133,7 +133,7 @@ async function handler(req: CustomRequest) {
   const { bookingToDelete, userId } = req;
   console.log(">>>req input");
   console.log(">>the query", req.query);
-  console.log(">>the params", req.params);
+  console.log(">>the env", req.env);
   console.log(">>the body", req.body);
 
   if (!bookingToDelete || !bookingToDelete.user) {
