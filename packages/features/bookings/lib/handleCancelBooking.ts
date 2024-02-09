@@ -306,7 +306,7 @@ async function handler(req: CustomRequest) {
       ...evt,
       ...eventTypeInfo,
       metadata: { a: req.query.metadata as string },
-      others: req.query.metadata as string,
+      // others: req.query.metadata as string,
       status: "CANCELLED",
       smsReminderNumber: bookingToDelete.smsReminderNumber || undefined,
     }).catch((e) => {
@@ -798,7 +798,7 @@ async function handleSeatedEventCancellation(
       ...evt,
       ...eventTypeInfo,
       metadata: { a: req.query.metadata as string },
-      others: req.query.metadata as string,
+      // others: req.query.metadata as string,
       status: "CANCELLED",
       smsReminderNumber: bookingToDelete.smsReminderNumber || undefined,
     }).catch((e) => {
