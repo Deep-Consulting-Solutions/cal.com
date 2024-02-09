@@ -131,6 +131,10 @@ async function handler(req: CustomRequest) {
     schemaBookingCancelParams.parse(req.body);
   req.bookingToDelete = await getBookingToDelete(id, uid);
   const { bookingToDelete, userId } = req;
+  console.log(">>>req input");
+  console.log(">>the query", req.query);
+  console.log(">>the params", req.params);
+  console.log(">>the body", req.body);
 
   if (!bookingToDelete || !bookingToDelete.user) {
     throw new HttpError({ statusCode: 400, message: "Booking not found" });
@@ -302,6 +306,7 @@ async function handler(req: CustomRequest) {
       ...evt,
       ...eventTypeInfo,
       metadata: { a: req.query.metadata as string },
+      others: req.query.metadata as string,
       status: "CANCELLED",
       smsReminderNumber: bookingToDelete.smsReminderNumber || undefined,
     }).catch((e) => {
@@ -793,6 +798,7 @@ async function handleSeatedEventCancellation(
       ...evt,
       ...eventTypeInfo,
       metadata: { a: req.query.metadata as string },
+      others: req.query.metadata as string,
       status: "CANCELLED",
       smsReminderNumber: bookingToDelete.smsReminderNumber || undefined,
     }).catch((e) => {
