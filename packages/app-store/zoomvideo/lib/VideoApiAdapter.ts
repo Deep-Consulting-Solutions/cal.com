@@ -76,7 +76,7 @@ const zoomRefreshedTokenSchema = z.object({
 
 const zoomAuth = (credential: CredentialPayload) => {
   const refreshAccessTokenWithRetry = async (refreshToken: string, maxRetries = 3) => {
-    let response;
+    let response: Response | undefined;
     let attempt = 0;
     while (attempt < maxRetries) {
       console.log(">>>>refreshAccessTokenWithRetry: attempt", attempt);
@@ -252,7 +252,7 @@ const ZoomVideoApiAdapter = (credential: CredentialPayload): VideoApiAdapter => 
   };
 
   const fetchZoomApi = async (endpoint: string, options?: RequestInit, maxRetries = 3) => {
-    let response;
+    let response: Response | undefined;
     let attempt = 0;
     while (attempt < maxRetries) {
       console.log(">>>>fetchZoomApi: attempt", attempt);
@@ -301,7 +301,7 @@ const ZoomVideoApiAdapter = (credential: CredentialPayload): VideoApiAdapter => 
       }
     },
     createMeetingWithRetry: async (event: CalendarEvent, retryCount = 3): Promise<unknown> => {
-      let response;
+      let response: Response | undefined;
       let attempt = 0;
       while (attempt < retryCount) {
         console.log(">>>>createMeetingWithRetry: attempt", attempt);
