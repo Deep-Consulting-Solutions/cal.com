@@ -76,7 +76,7 @@ const zoomRefreshedTokenSchema = z.object({
 
 const zoomAuth = (credential: CredentialPayload) => {
   const refreshAccessTokenWithRetry = async (refreshToken: string, maxRetries = 3) => {
-    let response = 0;
+    let response;
     let attempt = 0;
     while (attempt < maxRetries) {
       console.log(">>>>refreshAccessTokenWithRetry: attempt", attempt);
