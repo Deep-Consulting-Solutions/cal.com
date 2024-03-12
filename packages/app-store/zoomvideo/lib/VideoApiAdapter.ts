@@ -75,28 +75,74 @@ const zoomRefreshedTokenSchema = z.object({
 });
 
 const zoomAuth = (credential: CredentialPayload) => {
-  const refreshAccessToken = async (refreshToken: string) => {
-    const { client_id, client_secret } = await getZoomAppKeys();
-    const authHeader = `Basic ${Buffer.from(`${client_id}:${client_secret}`).toString("base64")}`;
+  const refreshAccessTokenWithRetry = async (refreshToken: string, maxRetries = 3) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let response: any;
+    // let finalResponse: Response;
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      console.log(">>>>refreshAccessTokenWithRetry: attempt", attempt);
+      const { client_id, client_secret } = await getZoomAppKeys();
+      const authHeader = `Basic ${Buffer.from(`${client_id}:${client_secret}`).toString("base64")}`;
+      console.log(">>>>refreshAccessTokenWithRetry: creds", client_id, client_secret, authHeader);
 
-    const response = await refreshOAuthTokens(
-      async () =>
-        await fetch("https://zoom.us/oauth/token", {
-          method: "POST",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            refresh_token: refreshToken,
-            grant_type: "refresh_token",
+      response = await refreshOAuthTokens(
+        async () =>
+          await fetch("https://zoom.us/oauth/token", {
+            method: "POST",
+            headers: {
+              Authorization: authHeader,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              refresh_token: refreshToken,
+              grant_type: "refresh_token",
+            }),
           }),
-        }),
-      metadata.slug,
-      credential.userId
-    );
+        metadata.slug,
+        credential.userId
+      );
+      // finalResponse = response;
+      // console.log(">>>>refreshAccessTokenWithRetry: resp", response);
+      console.log(">>>>refreshAccessTokenWithRetry: resp", response);
 
-    const responseBody = await handleZoomResponse(response, credential.id);
+      let _response = response.clone();
+      // const responseClone = response.clone();
+      if (_response.headers.get("content-encoding") === "gzip") {
+        const responseString = await response.text();
+        _response = JSON.parse(responseString);
+      }
+      if (!response.ok || (response.status < 200 && response.status >= 300)) {
+        const responseBody = await _response.json();
+
+        if (!((response && response?.status === 124) || responseBody?.error === "invalid_grant")) {
+          break; // Success or a different error, no need to retry
+        }
+        // if ((response && response.status === 124) || responseBody.error === "invalid_grant") {
+        //   await invalidateCredential(credentialId);
+        // }
+        // throw Error(response.statusText);
+      }
+
+      // if (!((response && response?.status === 124) || response?.error === "invalid_grant")) {
+      //   break; // Success or a different error, no need to retry
+      // }
+
+      attempt++;
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+
+    return response;
+    // return finalResponse;
+  };
+
+  const refreshAccessToken = async (refreshToken: string) => {
+    console.log(">>>>refreshAccessTokenWithRetry: about to refresh token", refreshAccessToken);
+    const response = await refreshAccessTokenWithRetry(refreshToken);
+
+    const responseBody = await handleZoomResponse(response as Response, credential.id);
 
     if (responseBody.error) {
       if (responseBody.error === "invalid_grant") {
@@ -227,19 +273,108 @@ const ZoomVideoApiAdapter = (credential: CredentialPayload): VideoApiAdapter => 
     };
   };
 
-  const fetchZoomApi = async (endpoint: string, options?: RequestInit) => {
-    const auth = zoomAuth(credential);
-    const accessToken = await auth.getToken();
-    const response = await fetch(`https://api.zoom.us/v2/${endpoint}`, {
-      method: "GET",
-      ...options,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        ...options?.headers,
-      },
-    });
-    const responseBody = await handleZoomResponse(response, credential.id);
+  const fetchZoomApi = async (endpoint: string, options?: RequestInit, maxRetries = 3) => {
+    // let response: Response | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let response: any;
+    // let finalResponse: Response;
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      console.log(">>>>fetchZoomApi: attempt", attempt);
+      const auth = zoomAuth(credential);
+      const accessToken = await auth.getToken();
+      response = await fetch(`https://api.zoom.us/v2/${endpoint}`, {
+        method: "GET",
+        ...options,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...options?.headers,
+        },
+      });
+      // finalResponse = response;
+      // console.log(">>>>fetchZoomApi: response err", response);
+      console.log(">>>>fetchZoomApi: response", response);
+
+      let _response = response.clone();
+      // const responseClone = response.clone();
+      if (_response.headers.get("content-encoding") === "gzip") {
+        const responseString = await response.text();
+        _response = JSON.parse(responseString);
+      }
+      if (!response.ok || (response.status < 200 && response.status >= 300)) {
+        const responseBody = await _response.json();
+
+        if (!((response && response.status === 124) || responseBody.error === "invalid_grant")) {
+          break; // Success or a different error, no need to retry
+        }
+        // if ((response && response.status === 124) || responseBody.error === "invalid_grant") {
+        //   await invalidateCredential(credentialId);
+        // }
+        // throw Error(response.statusText);
+      }
+
+      // if (!((response && response.status === 124) || response.error === "invalid_grant")) {
+      //   break; // Success or a different error, no need to retry
+      // }
+
+      attempt++;
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+
+    const responseBody = await handleZoomResponse(response as Response, credential.id);
+    // const responseBody = await handleZoomResponse(finalResponse, credential.id);
     return responseBody;
+  };
+
+  const createMeetingWithRetry = async (event: CalendarEvent, retryCount = 3) => {
+    // let finalResponse: Response;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let response: any;
+    let attempt = 0;
+    while (attempt < retryCount) {
+      console.log(">>>>createMeetingWithRetry: attempt", attempt);
+      response = await fetchZoomApi("users/me/meetings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(translateEvent(event)),
+      });
+      // finalResponse = response;
+      // console.log(">>>>createMeetingWithRetry: resp", response);
+      console.log(">>>>createMeetingWithRetry: resp", response);
+
+      // let _response = response.clone();
+      // // const responseClone = response.clone();
+      // if (_response.headers.get("content-encoding") === "gzip") {
+      //   const responseString = await response.text();
+      //   _response = JSON.parse(responseString);
+      // }
+      // if (!response.ok || (response.status < 200 && response.status >= 300)) {
+      //   const responseBody = await _response.json();
+
+      //   if (response.error && responseBody.error !== "invalid_grant") {
+      //     break; // Success or no invalid grant, no need to retry
+      //   }
+      //   // if ((response && response.status === 124) || responseBody.error === "invalid_grant") {
+      //   //   await invalidateCredential(credentialId);
+      //   // }
+      //   throw Error(response.statusText);
+      // }
+
+      if (response?.error && response.error !== "invalid_grant") {
+        break; // Success or no invalid grant, no need to retry
+      }
+
+      attempt++;
+      if (attempt < retryCount) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+
+    return response;
   };
 
   return {
@@ -261,13 +396,10 @@ const ZoomVideoApiAdapter = (credential: CredentialPayload): VideoApiAdapter => 
     },
     createMeeting: async (event: CalendarEvent): Promise<VideoCallData> => {
       try {
-        const response = await fetchZoomApi("users/me/meetings", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(translateEvent(event)),
-        });
+        console.log(">>>>createMeetingWithRetry: about to create meeting with retry");
+        // const response = (await createMeetingWithRetry(event)) as Response;
+        // const response = (await createMeetingWithRetry(event)) as any;
+        const response = await createMeetingWithRetry(event);
         if (response.error) {
           if (response.error === "invalid_grant") {
             await invalidateCredential(credential.id);
