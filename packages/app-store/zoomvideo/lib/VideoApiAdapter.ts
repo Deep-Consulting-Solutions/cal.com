@@ -103,7 +103,7 @@ const zoomAuth = (credential: CredentialPayload) => {
       console.log(">>>>refreshAccessTokenWithRetry: resp", response.error);
       console.log(">>>>refreshAccessTokenWithRetry: resp", response);
 
-      if (!((response && response.status === 124) || responseBody.error === "invalid_grant")) {
+      if (!((response && response.status === 124) || response.error === "invalid_grant")) {
         break; // Success or a different error, no need to retry
       }
 
@@ -269,7 +269,7 @@ const ZoomVideoApiAdapter = (credential: CredentialPayload): VideoApiAdapter => 
       console.log(">>>>fetchZoomApi: response err", response.error);
       console.log(">>>>fetchZoomApi: response", response);
 
-      if (!((response && response.status === 124) || responseBody.error === "invalid_grant")) {
+      if (!((response && response.status === 124) || response.error === "invalid_grant")) {
         break; // Success or a different error, no need to retry
       }
 
