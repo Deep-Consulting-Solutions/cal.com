@@ -416,8 +416,8 @@ export default class EventManager {
             log.debug("case where user supplies zoom for a non zoom initial meeting");
             evt.location = locationSuppliedByUser;
             result = await this.createVideoEvent(evt);
-            const uid = translator.fromUUID(uuidv5(JSON.stringify(evt), uuidv5.URL));
-            result.uid = uid;
+            // const uid = translator.fromUUID(uuidv5(JSON.stringify(evt), uuidv5.URL));
+            // result.uid = uid;
             if (result?.createdEvent) {
               evt.videoCallData = result.createdEvent;
               evt.location = result.originalEvent.location;
