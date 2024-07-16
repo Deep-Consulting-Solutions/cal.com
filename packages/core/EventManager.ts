@@ -336,6 +336,7 @@ export default class EventManager {
     newDestinationCalendar?: DestinationCalendar[] | null,
     locationSuppliedByUser?: string
   ): Promise<CreateUpdateResult> {
+    console.log('Reschedule method called');
     const originalEvt = processLocation(event);
     const evt = cloneDeep(originalEvt);
     if (!rescheduleUid) {
@@ -406,12 +407,14 @@ export default class EventManager {
           ? isDedicatedIntegration(evt.location)
           : null;
 
+        console.log('RescheduleOrganizerChanged not changed', { isDedicated, locationSuppliedByUser })
         if (locationSuppliedByUser && locationSuppliedByUser.includes("phone")) {
           const zoomBookingRef = booking
             ? booking.references.filter((ref) => ref.type === "zoom_video")[0]
             : null;
 
           if (zoomBookingRef) await this.deleteVideoEventForBookingReference({ bookingVideoReference: zoomBookingRef });
+          console.log('Meeting deleted on zoom');
         }
         
         // If and only if event type is a dedicated meeting, update the dedicated video meeting.
