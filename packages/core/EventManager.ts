@@ -407,8 +407,8 @@ export default class EventManager {
           ? isDedicatedIntegration(evt.location)
           : null;
 
-        console.log('RescheduleOrganizerChanged not changed', { isDedicated, locationSuppliedByUser })
-        if (locationSuppliedByUser && locationSuppliedByUser.includes("phone")) {
+        log.silly('RescheduleOrganizerChanged not changed', safeStringify({ isDedicated, locationSuppliedByUser }));
+        if (locationSuppliedByUser && !locationSuppliedByUser.includes("zoom")) {
           const zoomBookingRef = booking
             ? booking.references.filter((ref) => ref.type === "zoom_video")[0]
             : null;
