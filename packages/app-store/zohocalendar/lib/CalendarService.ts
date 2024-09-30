@@ -262,9 +262,11 @@ export default class ZohoCalendarService implements Calendar {
 
     const data = await this.handleData(response, this.log);
 
-    console.log(response, data);
+    console.dir(data, { depth: null });
 
     if (data.fb_not_enabled || data.NODATA) return [];
+
+    console.log('got freeBusy Data');
 
     return (
       data.freebusy
@@ -311,6 +313,8 @@ export default class ZohoCalendarService implements Calendar {
       const originalEndDate = dayjs(dateTo);
       const diff = originalEndDate.diff(originalStartDate, "days");
 
+      console.log('diff', diff);
+
       if (diff <= 30) {
         console.log(originalStartDate.format("YYYYMMDD[T]HHmmss[Z]"));
         console.log(originalEndDate.format("YYYYMMDD[T]HHmmss[Z]"));
@@ -319,7 +323,7 @@ export default class ZohoCalendarService implements Calendar {
           originalEndDate.format("YYYYMMDD[T]HHmmss[Z]"),
           userInfo.Email
         );
-        console.log(busyData);
+        console.log('busyData', busyData);
         return busyData;
       } else {
         // Zoho only supports 31 days of freebusy data
@@ -345,6 +349,7 @@ export default class ZohoCalendarService implements Calendar {
           endDate = startDate.add(30, "days");
         }
 
+        console.log('busyData', busyData);
         return busyData;
       }
     } catch (error) {
