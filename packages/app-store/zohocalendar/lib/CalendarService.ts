@@ -269,27 +269,39 @@ export default class ZohoCalendarService implements Calendar {
     console.log('got freeBusy Data');
 
     const freebusy = data.freebusy
-      .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
-      .map((freebusy: FreeBusy) => ({
-        startTime: freebusy.startTime.replace('T', '').replace('Z', ''),
-        endTime: freebusy.endTime.replace('T', '').replace('Z', ''),
-      }))
+      .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy");
 
-    console.log(freebusy);
+    const busyData = [];
+    const invalidData = [];
 
-    return (
-      freebusy
-        .map((freebusy: FreeBusy) => {
-          const startTimeFormatted = freebusy.startTime.length === 8 ? freebusy.startTime + '0000' : freebusy.startTime;
-          const endTimeFormatted = freebusy.endTime.length === 8 ? freebusy.endTime + '0000' : freebusy.endTime;
-          
-          return {
-            // Convert to ISO using dayjs
-            start: dayjs.utc(startTimeFormatted, "YYYYMMDDHHmmss").toISOString(),
-            end: dayjs.utc(endTimeFormatted, "YYYYMMDDHHmmss").toISOString(),
-          };
-        }) || []
-    );
+    for (const fb of freebusy) {
+      let startTime = fb.startTime.replace('T', '').replace('Z', '');
+      let endTime = fb.endTime.replace('T', '').replace('Z', '')
+
+      if (startTime.length === 8) {
+        startTime = startTime + '0000';
+      }
+
+      if (endTime.length === 8) {
+        endTime = endTime + '0000';
+      }
+
+      try {
+        busyData.push({
+          start: dayjs.utc(startTime, "YYYYMMDDHHmmss").toISOString(),
+          end: dayjs.utc(endTime, "YYYYMMDDHHmmss").toISOString(),
+        });
+      } catch (err) {
+        invalidData.push({
+          startTime,
+          endTime
+        })
+      }
+    }
+
+    console.log(invalidData);
+
+    return (busyData || []);
   }
 
   async getAvailability(
