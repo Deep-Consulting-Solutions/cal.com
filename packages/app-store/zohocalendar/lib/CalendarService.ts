@@ -1,5 +1,6 @@
 import { stringify } from "querystring";
 import { z } from "zod";
+import moment from "moment";
 
 import dayjs from "@calcom/dayjs";
 import { getLocation, getRichDescription } from "@calcom/lib/CalEventParser";
@@ -246,7 +247,6 @@ export default class ZohoCalendarService implements Calendar {
   }
 
   private async getBusyData(dateFrom: string, dateTo: string, userEmail: string) {
-    console.log('<========= ZohoCalendarService.getBusyData =========>');
     const query = stringify({
       sdate: dateFrom,
       edate: dateTo,
@@ -260,19 +260,15 @@ export default class ZohoCalendarService implements Calendar {
 
     const data = await this.handleData(response, this.log);
 
-    console.log("data", data);
-
     if (data.fb_not_enabled || data.NODATA) return [];
-
-    console.log("freebusy_enabled", data.fb_enabled);
 
     return (
       data.freebusy
         .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
         .map((freebusy: FreeBusy) => ({
           // using dayjs utc plugin because by default, dayjs parses and displays in local time, which causes a mismatch
-          start: dayjs.utc(freebusy.startTime, "YYYYMMDD[T]HHmmss[Z]").toISOString(),
-          end: dayjs.utc(freebusy.endTime, "YYYYMMDD[T]HHmmss[Z]").toISOString(),
+          start: moment.utc(freebusy.startTime, "YYYYMMDDTHHmmssZ").toISOString(),
+          end: moment.utc(freebusy.endTime, "YYYYMMDDTHHmmssZ").toISOString(),
         })) || []
     );
   }
