@@ -279,11 +279,16 @@ export default class ZohoCalendarService implements Calendar {
 
     return (
       freebusy
-        .map((freebusy: FreeBusy) => ({
-          // using dayjs utc plugin because by default, dayjs parses and displays in local time, which causes a mismatch
-          start: dayjs.utc(freebusy.startTime, "YYYYMMDDHHmmss").toISOString(),
-          end: dayjs.utc(freebusy.endTime, "YYYYMMDDHHmmss").toISOString(),
-        })) || []
+        .map((freebusy: FreeBusy) => {
+          const startTimeFormatted = freebusy.startTime.length === 8 ? freebusy.startTime + '0000' : freebusy.startTime;
+          const endTimeFormatted = freebusy.endTime.length === 8 ? freebusy.endTime + '0000' : freebusy.endTime;
+          
+          return {
+            // Convert to ISO using dayjs
+            start: dayjs.utc(startTimeFormatted, "YYYYMMDDHHmmss").toISOString(),
+            end: dayjs.utc(endTimeFormatted, "YYYYMMDDHHmmss").toISOString(),
+          };
+        }) || []
     );
   }
 
