@@ -268,17 +268,21 @@ export default class ZohoCalendarService implements Calendar {
 
     console.log('got freeBusy Data');
 
+    const freebusy = data.freebusy
+      .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
+      .map((freebusy: FreeBusy) => ({
+        startTime: freebusy.startTime.replace('T', '').replace('Z', ''),
+        endTime: freebusy.endTime.replace('T', '').replace('Z', ''),
+      }))
+
+    console.log(freebusy);
+
     return (
-      data.freebusy
-        .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
-        .map((freebusy: FreeBusy) => ({
-          startTime: freebusy.startTime.replace('T', '').replace('Z', ''),
-          endTime: freebusy.endTime.replace('T', '').replace('Z', ''),
-        }))
+      freebusy
         .map((freebusy: FreeBusy) => ({
           // using dayjs utc plugin because by default, dayjs parses and displays in local time, which causes a mismatch
-          start: dayjs.utc(freebusy.startTime?.replace('T', '')?.replace('Z', ''), "YYYYMMDDHHmmss").toISOString(),
-          end: dayjs.utc(freebusy.endTime?.replace('T', '')?.replace('Z', ''), "YYYYMMDDHHmmss").toISOString(),
+          start: dayjs.utc(freebusy.startTime, "YYYYMMDDHHmmss").toISOString(),
+          end: dayjs.utc(freebusy.endTime, "YYYYMMDDHHmmss").toISOString(),
         })) || []
     );
   }
