@@ -246,6 +246,7 @@ export default class ZohoCalendarService implements Calendar {
   }
 
   private async getBusyData(dateFrom: string, dateTo: string, userEmail: string) {
+    console.log('<========= ZohoCalendarService.getBusyData =========>');
     const query = stringify({
       sdate: dateFrom,
       edate: dateTo,
@@ -259,7 +260,11 @@ export default class ZohoCalendarService implements Calendar {
 
     const data = await this.handleData(response, this.log);
 
+    console.log("data", data);
+
     if (data.fb_not_enabled || data.NODATA) return [];
+
+    console.log("freebusy_enabled", data.fb_enabled);
 
     return (
       data.freebusy
