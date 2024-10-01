@@ -1,5 +1,6 @@
 import { stringify } from "querystring";
 import { z } from "zod";
+import moment from "moment";
 
 import dayjs from "@calcom/dayjs";
 import { getLocation, getRichDescription } from "@calcom/lib/CalEventParser";
@@ -274,8 +275,8 @@ export default class ZohoCalendarService implements Calendar {
         .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
         .map((freebusy: FreeBusy) => ({
           // using dayjs utc plugin because by default, dayjs parses and displays in local time, which causes a mismatch
-          start: dayjs.utc(freebusy.startTime, "YYYYMMDD[T]HHmmss[Z]").toISOString(),
-          end: dayjs.utc(freebusy.endTime, "YYYYMMDD[T]HHmmss[Z]").toISOString(),
+          start: moment.utc(freebusy.startTime, "YYYYMMDDTHHmmssZ").toISOString(),
+          end: moment.utc(freebusy.endTime, "YYYYMMDDTHHmmssZ").toISOString(),
         })) || []
     );
   }
