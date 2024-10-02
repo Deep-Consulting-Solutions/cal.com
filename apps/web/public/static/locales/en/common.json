@@ -238,6 +238,8 @@
   "404_page_not_found": "404: This page could not be found.",
   "booker_event_not_found": "We could not find the event you are trying to book.",
   "getting_started": "Getting Started",
+  "complete_setup": "Complete Setup",
+  "scheduling_setup_success":"Scheduling is Setup Successfully",
   "15min_meeting": "15 Min Meeting",
   "30min_meeting": "30 Min Meeting",
   "secret": "Secret",
