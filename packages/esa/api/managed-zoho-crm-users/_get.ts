@@ -8,7 +8,7 @@ import { getScheduleByUserIdHandler } from "@calcom/trpc/server/routers/viewer/a
 
 import { zohoClient } from "../../lib/zoho";
 
-async function getHandler(req: NextApiRequest) {
+export async function getHandler(req: NextApiRequest) {
   const $req = req as NextApiRequest & { prisma: any };
 
   const prisma: PrismaClient = $req.prisma;
@@ -42,10 +42,18 @@ async function getHandler(req: NextApiRequest) {
       timeZone: zohoMailAccount?.timeZone || u.time_zone,
       status: setupEntry?.status || "Not Started",
     };
-  });
+  }) as {
+    userId: string;
+    zuid: string;
+    email: string;
+    name: string;
+    hasZohoCalender: boolean;
+    timeZone: string;
+    status: "Not Started" | "Completed" | "In Progress";
+  }[];
 
   const withSchedule = await Promise.all(
-    users.map(async (user: any) => {
+    users.map(async (user) => {
       if (user.userId) {
         const contextUser = { id: user.userId, timeZone: user.timeZone };
         const schedule = await getScheduleByUserIdHandler({

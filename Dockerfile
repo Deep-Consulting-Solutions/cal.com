@@ -30,6 +30,7 @@ COPY apps/web ./apps/web
 COPY packages ./packages
 COPY tests ./tests
 
+RUN cat .yarnrc.extras.yml >> .yarnrc.yml
 RUN cp .yarnrc.yml .yarnrc.yml.bak && sed "s/<npm-auth-token>/$ACCESS_TOKEN/g" .yarnrc.yml > .yarnrc.yml.new && mv .yarnrc.yml.new .yarnrc.yml
 RUN yarn config set httpTimeout 12000000 &&\
     yarn install
