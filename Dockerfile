@@ -24,7 +24,7 @@ ENV NEXT_PUBLIC_WEBAPP_URL=http://NEXT_PUBLIC_WEBAPP_URL_PLACEHOLDER \
     CALENDSO_ENCRYPTION_KEY=${CALENDSO_ENCRYPTION_KEY} \
     NODE_OPTIONS=--max-old-space-size=${MAX_OLD_SPACE_SIZE}
 
-COPY package.json yarn.lock .yarnrc.yml playwright.config.ts turbo.json git-init.sh git-setup.sh ./
+COPY package.json yarn.lock .yarnrc.extras.yml .yarnrc.yml playwright.config.ts turbo.json git-init.sh git-setup.sh ./
 COPY .yarn ./.yarn
 COPY apps/web ./apps/web
 COPY packages ./packages
