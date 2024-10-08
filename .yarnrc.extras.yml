@@ -1,0 +1,4 @@
+npmScopes:
+  deep-consulting-solutions:
+    npmRegistryServer: "https://npm.pkg.github.com"
+    npmAuthToken: <npm-auth-token>

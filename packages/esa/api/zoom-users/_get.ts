@@ -19,9 +19,15 @@ async function getHandler(req: NextApiRequest) {
   const adapter = VideoApiAdapter({ key: { user_id: true } } as any);
   const response = await (adapter as any).getZoomUsers();
 
+  const { excludeZohoUserId } = $req.query;
+
   const prisma: PrismaClient = $req.prisma;
   const schedulingSetupEntries = await prisma.zohoSchedulingSetup.findMany();
-  const linkedZoomAccounts = schedulingSetupEntries.map((entry) => entry.zoomUserId);
+  const linkedZoomAccounts = schedulingSetupEntries
+    .filter((entry) => {
+      return excludeZohoUserId ? entry.zuid !== excludeZohoUserId : true;
+    })
+    .map((entry) => entry.zoomUserId);
 
   const notYetLinkedZoomUsers = (response.users as ZoomUser[])
     .filter((user) => {

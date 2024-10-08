@@ -204,8 +204,8 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   const url = `${OAUTH_BASE_URL}/auth?${query}`;
 
   await sendMail({
-    from: "buffer-sender@buffer-staging.esa-emails.technology",
-    to: "talor.dcs@gmail.com",
+    from: "buffer-sender@buffer-staging.esa-emails.technology", // TODO: get from env
+    to: email,
     subject: "Scheduling Setup",
     html: setupZohoCalenderOauthEmail({ url }),
   });

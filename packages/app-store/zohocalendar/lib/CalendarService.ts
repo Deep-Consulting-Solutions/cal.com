@@ -1,6 +1,6 @@
+import moment from "moment";
 import { stringify } from "querystring";
 import { z } from "zod";
-import moment from "moment";
 
 import dayjs from "@calcom/dayjs";
 import { getLocation, getRichDescription } from "@calcom/lib/CalEventParser";
@@ -289,7 +289,7 @@ export default class ZohoCalendarService implements Calendar {
 
     try {
       let queryIds = selectedCalendarIds;
-      console.log('ZohoCalendarService.getAvailability', queryIds);
+      console.log("ZohoCalendarService.getAvailability", queryIds);
 
       if (queryIds.length === 0) {
         queryIds = (await this.listCalendars()).map((e) => e.externalId) || [];
@@ -341,6 +341,18 @@ export default class ZohoCalendarService implements Calendar {
     } catch (error) {
       this.log.error(error);
       return [];
+    }
+  }
+
+  async listCalendarsRaw(): Promise<ZohoCalendarListResp> {
+    try {
+      const resp = await this.fetcher(`/calendars`);
+      const data = (await this.handleData(resp, this.log)) as ZohoCalendarListResp;
+
+      return data;
+    } catch (err) {
+      this.log.error("There was an error contacting zoho calendar service: ", err);
+      throw err;
     }
   }
 
