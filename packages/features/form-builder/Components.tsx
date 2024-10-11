@@ -279,7 +279,7 @@ export const Components: Record<FieldType, Component> = {
                   data-testid="add-another-guest"
                   type="button"
                   className={classNames(
-                    "min-h-9 hover:border-brand-default dark:border-default dark:hover:border-brand-default my-2.5 mb-2 mr-auto flex h-auto flex-grow flex-col justify-center border-[#0069FF80] py-2 hover:border-[#0069FF]"
+                    "min-h-9 hover:border-brand-default dark:border-default dark:hover:border-brand-default my-2.5 mb-2 mr-auto flex h-auto flex-grow flex-col justify-center rounded-[32px] border-[#0069FF80] py-2 hover:border-[#0069FF]"
                   )}
                   color="special"
                   onClick={() => {
@@ -298,7 +298,7 @@ export const Components: Record<FieldType, Component> = {
             <Button
               data-testid="add-guests"
               className={classNames(
-                "min-h-9 hover:border-brand-default dark:border-default dark:hover:border-brand-default mb-2 mr-auto flex h-auto flex-grow flex-col justify-center border-[#0069FF80] py-2 hover:border-[#0069FF]"
+                "min-h-9 hover:border-brand-default dark:border-default dark:hover:border-brand-default mb-2 mr-auto flex h-auto flex-grow flex-col justify-center rounded-[32px] border-[#0069FF80] py-2 hover:border-[#0069FF]"
               )}
               color="special"
               variant="button"
