@@ -65,6 +65,7 @@ export const BookEventForm = ({
     // This is a hack to make sure that the phone number is always in the correct format
     if (!isPhoneModified) {
       const values: any = bookingForm.getValues();
+      console.log({ values });
       if (values.responses?.phone) {
         const phone = values.responses.phone;
         if (phone.length > 0 && phone[0] !== "+") {
@@ -96,7 +97,7 @@ export const BookEventForm = ({
         }
       }
     }
-  }, [bookingForm.getValues()]);
+  }, [bookingForm, isPhoneModified, setFormValues]);
 
   const isPaidEvent = useMemo(() => {
     if (!eventType?.price) return false;
@@ -178,13 +179,19 @@ export const BookEventForm = ({
           ) : (
             <>
               {!!onCancel && !hideBackButton && (
-                <Button color="minimal" type="button" onClick={onCancel} data-testid="back">
+                <Button
+                  color="minimal"
+                  type="button"
+                  onClick={onCancel}
+                  className="rounded-[32px]"
+                  data-testid="back">
                   {t("back")}
                 </Button>
               )}
               <Button
                 type="submit"
                 color="primaryAlt"
+                className="rounded-[32px]"
                 loading={loadingStates.creatingBooking || loadingStates.creatingRecurringBooking}
                 data-testid={
                   rescheduleUid && bookingData ? "confirm-reschedule-button" : "confirm-book-button"
