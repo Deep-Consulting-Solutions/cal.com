@@ -461,7 +461,9 @@ const BookerComponent = ({
                 <p className="my-2 text-center font-semibold">Select a Date & Time</p>
                 <div className="flex h-[95%] flex-col justify-between">
                   <DatePicker event={event} schedule={schedule} />
-                  <TimezoneWithLabel event={event.data} isPending={event.isPending} className="p-6" />
+                  {layout == BookerLayouts.MONTH_VIEW && bookerState !== "selecting_time_alt" && (
+                    <TimezoneWithLabel event={event.data} isPending={event.isPending} className="p-6" />
+                  )}
                 </div>
               </m.div>
             </BookerSection>

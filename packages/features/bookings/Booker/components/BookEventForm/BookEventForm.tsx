@@ -65,7 +65,6 @@ export const BookEventForm = ({
     // This is a hack to make sure that the phone number is always in the correct format
     if (!isPhoneModified) {
       const values: any = bookingForm.getValues();
-      console.log({ values });
       if (values.responses?.phone) {
         const phone = values.responses.phone;
         if (phone.length > 0 && phone[0] !== "+") {
@@ -93,6 +92,11 @@ export const BookEventForm = ({
         const optionValue = location.optionValue;
         if (optionValue && optionValue.length && optionValue[0] !== "+" && /^[^a-zA-Z]*$/.test(optionValue)) {
           values.responses.location.optionValue = `+${optionValue}`;
+          setFormValues(values);
+        }
+        if (location.value === "phone" && !location.optionValue) {
+          const phone = values.responses?.phone || "";
+          values.responses.location.optionValue = `+${phone}`;
           setFormValues(values);
         }
       }
