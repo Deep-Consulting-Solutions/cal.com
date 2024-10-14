@@ -35,6 +35,7 @@ export const verifyManagedSetupCompletionToken: NextMiddleware = async function 
     }
 
     (req as any).setupId = setupEntry.id;
+    (req as any).userId = setupEntry.userId;
 
     await next();
   } catch (error) {
