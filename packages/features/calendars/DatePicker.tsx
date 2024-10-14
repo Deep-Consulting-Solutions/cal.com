@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { shallow } from "zustand/shallow";
 
 import type { Dayjs } from "@calcom/dayjs";
@@ -95,7 +95,7 @@ export const useCalendarDays = ({
   const availableDaysForTheMonth = daysToRenderForTheMonth.filter((day) => !day.disabled);
   const shouldRenderNextMonth =
     includedDatesInMonth.length > 0 &&
-    availableDaysForTheMonth.length <= 7 &&
+    availableDaysForTheMonth.length < 7 &&
     includedDatesNextMonth.length > 0;
 
   // Combine days from the current month and next month (if needed)
@@ -115,11 +115,11 @@ export const useCalendarDays = ({
       groupedWeeks.push(allDays.slice(i, i + daysPerWeek));
     }
 
-    if (includedDatesInMonth.length === 0) {
-      return groupedWeeks.slice(0, 5);
+    if (includedDatesInMonth.length === 0 || !shouldRenderNextMonth) {
+      return groupedWeeks;
     }
 
-    // Helper to check if a week has available days
+    // Helper to check if a week has available (non-disabled) days
     const hasAvailableDays = (week: DayObject[]) => week.some((day) => day && !day.disabled);
 
     // Find the first and last available week index
@@ -130,15 +130,40 @@ export const useCalendarDays = ({
 
     // Retain weeks between the first and last available week (inclusive)
     const boundedWeeks: DayObject[][] = [];
+    let availableDaysCount = 0;
+
     if (firstAvailableIndex !== -1 && adjustedLastAvailableIndex !== -1) {
       for (let i = firstAvailableIndex; i <= adjustedLastAvailableIndex; i++) {
-        boundedWeeks.push(groupedWeeks[i]);
+        const week = groupedWeeks[i];
+
+        // Accumulate the available (non-disabled) days
+        const availableDaysInWeek = week.filter((day) => day && !day.disabled).length;
+        availableDaysCount += availableDaysInWeek;
+
+        // Add the week to boundedWeeks
+        boundedWeeks.push(week);
+
+        // Stop once we have accumulated at least 7 available days
+        if (availableDaysCount >= 7) {
+          break;
+        }
       }
     }
 
-    // Limit the result to a maximum of 5 weeks
-    return boundedWeeks.slice(0, 5);
-  }, [allDays, includedDatesInMonth]);
+    // Check if boundedWeeks has less than 5 weeks, then find the index of the current week and slice the next 5 weeks
+    if (boundedWeeks.length < 5 && availableDaysCount < 14) {
+      const currentWeekIndex = groupedWeeks.findIndex((week) => week === boundedWeeks[0]);
+
+      // If the currentWeekIndex is found, slice from that index to the end of groupedWeeks
+      if (currentWeekIndex !== -1) {
+        return groupedWeeks.slice(currentWeekIndex, currentWeekIndex + 5);
+      }
+    }
+
+    return boundedWeeks;
+  }, [allDays, includedDatesInMonth.length, shouldRenderNextMonth]);
+
+  console.log({ weeks });
 
   return {
     daysToRenderForTheMonth,
@@ -263,8 +288,8 @@ const Days = ({
     excludedDates,
     includedDates: props.includedDates,
   });
-  const layout = useBookerStore((state) => state.layout, shallow);
 
+  const layout = useBookerStore((state) => state.layout, shallow);
   const [selectedDatesAndTimes] = useBookerStore((state) => [state.selectedDatesAndTimes], shallow);
 
   const isActive = (day: dayjs.Dayjs) => {
@@ -300,11 +325,10 @@ const Days = ({
     if (selected instanceof Array) return;
 
     const firstAvailableDate = daysToRenderForTheMonth.find((day) => !day.disabled)?.day;
-
     const isSelectedDateAvailable = selected
-      ? daysToRenderForTheMonth.some(({ day, disabled }) => {
-          return day && yyyymmdd(day) === yyyymmdd(selected) && !disabled;
-        })
+      ? daysToRenderForTheMonth.some(
+          ({ day, disabled }) => day && yyyymmdd(day) === yyyymmdd(selected) && !disabled
+        )
       : false;
 
     if (!isSelectedDateAvailable && firstAvailableDate) {
@@ -318,13 +342,39 @@ const Days = ({
     }
   }, [handleInitialDateSelection, layout]);
 
+  // Track if the previous week was unavailable
+  let wasPreviousWeekUnavailable = false;
+
   return (
     <>
       {weeks.map((week, weekIndex) => {
         // Find the index where the transition between months occurs
-        const transitionIndex = week.findIndex(({ day }) => day?.date() === 1);
+        const transitionIndex = week.findIndex(
+          ({ day }) => day?.date() === 1 && day?.month() === browsingDate.add(1, "month").month()
+        );
         // Check if this week contains the transition from current month to next month
         const isTransitionRow = transitionIndex !== -1;
+        const isUnavailableWeek = week.every(({ disabled }) => disabled);
+
+        // Render "No Availability" if this week is unavailable and the previous week was available
+        if (shouldRenderNextMonth && isUnavailableWeek && !isTransitionRow) {
+          if (!wasPreviousWeekUnavailable) {
+            wasPreviousWeekUnavailable = true;
+            return (
+              <div key={`week-${weekIndex}`} className="text-muted col-span-7 p-4 text-center text-sm">
+                No availability
+              </div>
+            );
+          } else {
+            // Skip rendering consecutive "No Availability" divs
+            wasPreviousWeekUnavailable = true;
+            return null;
+          }
+        } else {
+          // Reset the flag if this week is available
+          wasPreviousWeekUnavailable = false;
+        }
+
         return (
           <div key={`row-${weekIndex}`} className="relative contents">
             {week.map(({ day, disabled }, idx) => {
@@ -358,7 +408,14 @@ const Days = ({
                       {idx === transitionIndex && (
                         <>
                           <div className="absolute left-[-3px] right-[-3px] top-[-3px] h-[2px] bg-gray-300" />
-                          <div className="absolute left-[-3px] top-[-1px] h-[104%] w-[2px] bg-gray-300" />
+                          {idx !== 0 && (
+                            <div className="absolute left-[-3px] top-[-1px] h-[104%] w-[2px] bg-gray-300" />
+                          )}
+                          {idx === 0 && (
+                            <div className="text-white-700 absolute left-[-3px] top-[2px] text-xs">
+                              {browsingDate.add(1, "month").format("MMMM")}
+                            </div>
+                          )}
                         </>
                       )}
                       {idx < transitionIndex && (
@@ -385,7 +442,7 @@ const Days = ({
         );
       })}
 
-      {!props.isPending && includedDatesInMonth && includedDatesInMonth?.length === 0 && (
+      {!props.isPending && includedDatesInMonth?.length === 0 && (
         <NoAvailabilityOverlay month={month} nextMonthButton={nextMonthButton} />
       )}
     </>
@@ -400,6 +457,7 @@ const DatePicker = ({
   onMonthChange,
   ...passThroughProps
 }: DatePickerProps & Partial<React.ComponentProps<typeof Days>>) => {
+  const [autoNavigating, setAutoNavigating] = useState(true); // Track automatic navigation
   const browsingDate = passThroughProps.browsingDate || dayjs().startOf("month");
   const nextMonthBrowsingDate = browsingDate.add(1, "month");
   const { i18n } = useLocale();
@@ -414,6 +472,7 @@ const DatePicker = ({
 
   const changeMonth = useCallback(
     (newMonth: number) => {
+      setAutoNavigating(false); // Disable auto-navigation on manual action
       if (onMonthChange) {
         onMonthChange(browsingDate.add(newMonth, "month"));
       }
@@ -461,11 +520,15 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
+  // Effect to auto-navigate when no dates are available in the current month
   useEffect(() => {
-    if (includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
+    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
+      console.log("Hello");
       changeMonth(+1);
+    } else {
+      setAutoNavigating(false); // Reset the flag after the navigation is complete
     }
-  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length]);
+  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length, autoNavigating]);
 
   return (
     <div className={className}>
