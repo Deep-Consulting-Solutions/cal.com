@@ -16,12 +16,41 @@ interface ICalendarSwitchProps {
   isLastItemInList?: boolean;
   destination?: boolean;
   credentialId: number;
+  useEsaEndpoint?: boolean;
+  esaToken?: string;
 }
 const CalendarSwitch = (props: ICalendarSwitchProps) => {
-  const { title, externalId, type, isChecked, name, isLastItemInList = false, credentialId } = props;
+  const {
+    title,
+    externalId,
+    type,
+    isChecked,
+    name,
+    // isLastItemInList = false,
+    credentialId,
+    useEsaEndpoint = false,
+    esaToken = "",
+  } = props;
   const [checkedInternal, setCheckedInternal] = useState(isChecked);
   const utils = trpc.useContext();
   const { t } = useLocale();
+
+  const esaMutation = trpc.viewer.public.calendarAvailability.useMutation({
+    onSuccess: () => {
+      //
+    },
+    onError: () => {
+      setCheckedInternal(false);
+      showToast(`Something went wrong when toggling "${title}"`, "error");
+    },
+    onSettled: (data: { status: string }) => {
+      if (data.status === "error") {
+        setCheckedInternal(false);
+        showToast(`Something went wrong when toggling "${title}"`, "error");
+      }
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: async ({ isOn }: { isOn: boolean }) => {
       const body = {
@@ -29,8 +58,10 @@ const CalendarSwitch = (props: ICalendarSwitchProps) => {
         externalId: externalId,
       };
 
+      const url = "/api/availability/calendar";
+
       if (isOn) {
-        const res = await fetch("/api/availability/calendar", {
+        const res = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -42,7 +73,7 @@ const CalendarSwitch = (props: ICalendarSwitchProps) => {
           throw new Error("Something went wrong");
         }
       } else {
-        const res = await fetch(`/api/availability/calendar?${new URLSearchParams(body)}`, {
+        const res = await fetch(`${url}?${new URLSearchParams(body)}`, {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -72,7 +103,11 @@ const CalendarSwitch = (props: ICalendarSwitchProps) => {
           disabled={mutation.isPending}
           onCheckedChange={async (isOn: boolean) => {
             setCheckedInternal(isOn);
-            await mutation.mutate({ isOn });
+            if (useEsaEndpoint) {
+              await esaMutation.mutate({ isOn, token: esaToken, type, externalId, credentialId });
+            } else {
+              await mutation.mutate({ isOn });
+            }
           }}
         />
       </div>
