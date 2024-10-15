@@ -25,4 +25,12 @@ export const updateManagedZohoUserRequestSchema = z.object({
   zuid: z.string(),
   schedule: ZUpdateInputSchema,
   zoomUserId: z.string(),
+  zohoCalendars: z.array(
+    z.object({
+      externalId: z.string(),
+      credentialId: z.coerce.number(),
+      integration: z.string(),
+      selected: z.boolean(),
+    })
+  ),
 });

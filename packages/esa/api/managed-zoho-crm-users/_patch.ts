@@ -64,6 +64,39 @@ async function patchHandler(req: NextApiRequest) {
     });
   }
 
+  // selected calendars
+  for (const cal of body.zohoCalendars) {
+    if (cal.selected) {
+      await prisma.selectedCalendar.upsert({
+        where: {
+          userId_integration_externalId: {
+            userId: existingSetupEntry.userId,
+            integration: cal.integration,
+            externalId: cal.externalId,
+          },
+        },
+        create: {
+          userId: existingSetupEntry.userId,
+          integration: cal.integration,
+          externalId: cal.externalId,
+          credentialId: cal.credentialId,
+        },
+        // already exists
+        update: {},
+      });
+    } else {
+      await prisma.selectedCalendar.delete({
+        where: {
+          userId_integration_externalId: {
+            userId: existingSetupEntry.userId,
+            integration: cal.integration,
+            externalId: cal.externalId,
+          },
+        },
+      });
+    }
+  }
+
   return {
     message: "Managed setup updated",
   };
