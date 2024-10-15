@@ -1,6 +1,6 @@
 import { WEBAPP_URL } from "@calcom/lib/constants";
 
-import type { TCalendarAvailabilityInputSchema } from "./calendarAvailabilitySchema.schema";
+import type { TCalendarAvailabilityInputSchema } from "./calendarAvailability.schema";
 
 type CalendarAvailabilityOptions = {
   input: TCalendarAvailabilityInputSchema;
