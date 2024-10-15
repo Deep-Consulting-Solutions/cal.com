@@ -25,6 +25,7 @@ interface UseCalendarDaysProps {
   minDate?: Date;
   includedDates?: string[];
   excludedDates?: string[];
+  showOneMonth?: boolean;
 }
 
 export const useCalendarDays = ({
@@ -33,6 +34,7 @@ export const useCalendarDays = ({
   minDate,
   includedDates = [],
   excludedDates = [],
+  showOneMonth,
 }: UseCalendarDaysProps) => {
   // Create placeholder elements for empty days in first week
   const weekdayOfFirst = browsingDate.date(1).day();
@@ -93,10 +95,14 @@ export const useCalendarDays = ({
 
   // Check if next month should be rendered based on available days in the current month
   const availableDaysForTheMonth = daysToRenderForTheMonth.filter((day) => !day.disabled);
-  const shouldRenderNextMonth =
-    includedDatesInMonth.length > 0 &&
-    availableDaysForTheMonth.length < 7 &&
-    includedDatesNextMonth.length > 0;
+  const shouldRenderNextMonth = useMemo(() => {
+    if (showOneMonth) return false;
+    return (
+      includedDatesInMonth.length > 0 &&
+      availableDaysForTheMonth.length < 7 &&
+      includedDatesNextMonth.length > 0
+    );
+  }, [includedDatesInMonth, availableDaysForTheMonth, includedDatesNextMonth, showOneMonth]);
 
   // Combine days from the current month and next month (if needed)
   const allDays = useMemo(() => {
@@ -163,8 +169,6 @@ export const useCalendarDays = ({
     return boundedWeeks;
   }, [allDays, includedDatesInMonth.length, shouldRenderNextMonth]);
 
-  console.log({ weeks });
-
   return {
     daysToRenderForTheMonth,
     daysToRenderForNextMonth,
@@ -179,7 +183,7 @@ export type DatePickerProps = {
   /** which day of the week to render the calendar. Usually Sunday (=0) or Monday (=1) - default: Sunday */
   weekStart?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /** Fires whenever a selected date is changed. */
-  onChange: (date: Dayjs | null) => void;
+  onChange: (date: Dayjs | null, showOneMonth?: boolean) => void;
   /** Fires when the month is changed. */
   onMonthChange?: (date: Dayjs) => void;
   /** which date or dates are currently selected (not tracked from here) */
@@ -200,6 +204,8 @@ export type DatePickerProps = {
   isPending?: boolean;
   /** used to query the multiple selected dates */
   eventSlug?: string;
+  /** Can be used to force the calendar to show just one month */
+  showOneMonth?: boolean;
 };
 
 export const Day = ({
@@ -273,6 +279,7 @@ const Days = ({
   month,
   nextMonthButton,
   eventSlug,
+  showOneMonth,
   ...props
 }: Omit<DatePickerProps, "locale" | "className" | "weekStart"> & {
   DayComponent?: React.FC<React.ComponentProps<typeof Day>>;
@@ -287,6 +294,7 @@ const Days = ({
     minDate,
     excludedDates,
     includedDates: props.includedDates,
+    showOneMonth,
   });
 
   const layout = useBookerStore((state) => state.layout, shallow);
@@ -395,7 +403,8 @@ const Days = ({
                     <DayComponent
                       date={day}
                       onClick={() => {
-                        props.onChange(day);
+                        const dayIsInNextMonth = day?.month() === browsingDate.add(1, "month").month();
+                        props.onChange(day, dayIsInNextMonth);
                       }}
                       disabled={disabled}
                       active={isActive(day)}
@@ -455,6 +464,7 @@ const DatePicker = ({
   locale,
   selected,
   onMonthChange,
+  showOneMonth,
   ...passThroughProps
 }: DatePickerProps & Partial<React.ComponentProps<typeof Days>>) => {
   const [autoNavigating, setAutoNavigating] = useState(true); // Track automatic navigation
@@ -468,6 +478,7 @@ const DatePicker = ({
     minDate: passThroughProps.minDate,
     excludedDates: passThroughProps.excludedDates,
     includedDates: passThroughProps.includedDates,
+    showOneMonth,
   });
 
   const changeMonth = useCallback(
@@ -523,7 +534,6 @@ const DatePicker = ({
   // Effect to auto-navigate when no dates are available in the current month
   useEffect(() => {
     if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
-      console.log("Hello");
       changeMonth(+1);
     } else {
       setAutoNavigating(false); // Reset the flag after the navigation is complete
@@ -577,6 +587,7 @@ const DatePicker = ({
           browsingDate={browsingDate}
           month={month}
           nextMonthButton={() => changeMonth(+1)}
+          showOneMonth={showOneMonth}
         />
       </div>
     </div>
