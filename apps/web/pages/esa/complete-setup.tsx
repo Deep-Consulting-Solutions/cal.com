@@ -1,4 +1,3 @@
-import type { InferGetStaticPropsType } from "next";
 import Head from "next/head";
 import { useSearchParams } from "next/navigation";
 
@@ -6,15 +5,15 @@ import { classNames } from "@calcom/lib";
 import { APP_NAME } from "@calcom/lib/constants";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 
-import type { getServerSideProps } from "@lib/complete-setup/getServerSideProps";
-
 import PageWrapper from "@components/PageWrapper";
 import { ZohoConnectionSetupPage } from "@components/apps/ZohoConnection";
 import { CheckCircleIcon } from "@components/ui/CheckCircleIcon";
 
 export { getServerSideProps } from "@lib/complete-setup/getServerSideProps";
 
-export type PageProps = InferGetStaticPropsType<typeof getServerSideProps>;
+export interface PageProps {
+  zohoCalendar: Record<string, string>;
+}
 
 const CompleteSetupPage = ({ zohoCalendar }: PageProps) => {
   const { t } = useLocale();
