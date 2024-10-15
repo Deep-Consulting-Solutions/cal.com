@@ -53,7 +53,7 @@ const CompleteSetupPage = ({ zohoCalendar }: PageProps) => {
           </div>
         </div>
       ) : (
-        <ZohoConnectionSetupPage completeSetupToken={completeSetupToken} zohoCalendar={zohoCalendar} />
+        <ZohoConnectionSetupPage completeSetupToken={completeSetupToken || ""} zohoCalendar={zohoCalendar} />
       )}
     </div>
   );

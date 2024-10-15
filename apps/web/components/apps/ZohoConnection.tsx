@@ -35,7 +35,7 @@ export const ZohoConnectionSetupPage = ({
       return [];
     }
     const connectedZohoCalendars = query.data.connectedCalendars?.find(
-      (c) => c.integration.slug === zohoCalendar.slug
+      (c: { integration: { slug: string } }) => c.integration.slug === zohoCalendar.slug
     );
 
     if (!connectedZohoCalendars) {
@@ -105,20 +105,22 @@ export const ZohoConnectionSetupPage = ({
               <p className="text-subtle  text-sm">{t("toggle_calendars_conflict")}</p>
 
               <ul className="space-y-4 px-5 py-4">
-                {calendars.map((cal) => (
-                  <CalendarSwitch
-                    key={cal.externalId}
-                    externalId={cal.externalId}
-                    title={cal.name || "Nameless calendar"}
-                    name={cal.name || "Nameless calendar"}
-                    type={zohoCalendar.type}
-                    isChecked={cal.isSelected}
-                    destination={cal.externalId === destinationCalendar?.externalId}
-                    credentialId={cal.credentialId}
-                    useEsaEndpoint
-                    esaToken={completeSetupToken}
-                  />
-                ))}
+                {calendars.map(
+                  (cal: { externalId: string; name: string; isSelected: boolean; credentialId: number }) => (
+                    <CalendarSwitch
+                      key={cal.externalId}
+                      externalId={cal.externalId}
+                      title={cal.name || "Nameless calendar"}
+                      name={cal.name || "Nameless calendar"}
+                      type={zohoCalendar.type}
+                      isChecked={cal.isSelected}
+                      destination={cal.externalId === destinationCalendar?.externalId}
+                      credentialId={cal.credentialId}
+                      useEsaEndpoint
+                      esaToken={completeSetupToken}
+                    />
+                  )
+                )}
               </ul>
             </div>
             {query.isPending ? null : (
