@@ -6,6 +6,8 @@ import { classNames } from "@calcom/lib";
 import { APP_NAME } from "@calcom/lib/constants";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 
+import type { getServerSideProps } from "@lib/complete-setup/getServerSideProps";
+
 import PageWrapper from "@components/PageWrapper";
 import { ZohoConnectionSetupPage } from "@components/apps/ZohoConnection";
 import { CheckCircleIcon } from "@components/ui/CheckCircleIcon";
