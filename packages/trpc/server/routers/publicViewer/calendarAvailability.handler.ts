@@ -9,9 +9,9 @@ type CalendarAvailabilityOptions = {
 export const calendarAvailabilityHandler = async ({ input }: CalendarAvailabilityOptions) => {
   const token = input?.token || "";
   const isOn = !!input?.isOn;
-  const type = input?.type;
-  const externalId = input?.externalId;
-  const credentialId = input?.credentialId;
+  const type = input?.type || "";
+  const externalId = input?.externalId || "";
+  const credentialId = input?.credentialId || "";
 
   try {
     const body = {
