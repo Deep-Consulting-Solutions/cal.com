@@ -36,6 +36,7 @@ export async function getHandler(req: NextApiRequest) {
     return {
       userId: setupEntry?.userId,
       zuid: u.zuid,
+      zoomUserId: setupEntry?.zoomUserId,
       email: u.email,
       name: `${u.first_name} ${u.last_name}`,
       hasZohoCalender: !!zohoMailAccount,
