@@ -206,7 +206,7 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   await sendMail({
     from: "buffer-sender@buffer-staging.esa-emails.technology", // TODO: get from env
     to: email,
-    subject: "Scheduling Setup",
+    subject: "URGENT - Complete Your Scheduling Setup",
     html: setupZohoCalenderOauthEmail({ url }),
   });
 
