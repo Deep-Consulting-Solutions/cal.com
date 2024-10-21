@@ -10,17 +10,20 @@ import { appKeysSchema as zohoKeysSchema } from "@calcom/zohocalendar/zod";
 
 import { sendMail } from "../../lib/mailer";
 import setupZohoCalenderOauthEmail from "../../lib/mailer/templates/setupZohoCalenderOauthEmail";
-import { updateManagedZohoUserRequestSchema } from "../../validation/schemas";
 
 async function patchHandler(req: NextApiRequest) {
   const $req = req as NextApiRequest & { prisma: any };
 
-  const body = updateManagedZohoUserRequestSchema.parse($req.body);
+  const { zuid } = $req.body;
   const prisma: PrismaClient = $req.prisma;
+
+  if (!zuid) {
+    throw new Error("zoho user id is required");
+  }
 
   const existingSetupEntry = await prisma.zohoSchedulingSetup.findFirst({
     where: {
-      zuid: body.zuid,
+      zuid: zuid,
     },
   });
   if (!existingSetupEntry || !existingSetupEntry.userId) {
@@ -33,7 +36,7 @@ async function patchHandler(req: NextApiRequest) {
 
   const user = await prisma.user.findUnique({
     where: {
-      id: Number(body.userId),
+      id: Number(existingSetupEntry.userId),
     },
   });
   if (!user) {
