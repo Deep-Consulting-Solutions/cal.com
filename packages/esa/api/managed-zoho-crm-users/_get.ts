@@ -29,21 +29,27 @@ export async function getHandler(req: NextApiRequest) {
   const zohoMailAccounts = zohoMailAccountsResponse?.data?.data || [];
   const crmUsers = crmUsersResponse?.users || [];
 
-  const users = crmUsers.map((u: any) => {
-    const setupEntry = schedulingSetupEntries.find((entry: any) => String(entry.zuid) === String(u.zuid));
-    const zohoMailAccount = zohoMailAccounts.find((account: any) => String(account.zuid) === String(u.zuid));
+  const users = crmUsers
+    .filter((u: any) => {
+      return u.status === "active";
+    })
+    .map((u: any) => {
+      const setupEntry = schedulingSetupEntries.find((entry: any) => String(entry.zuid) === String(u.zuid));
+      const zohoMailAccount = zohoMailAccounts.find(
+        (account: any) => String(account.zuid) === String(u.zuid)
+      );
 
-    return {
-      userId: setupEntry?.userId,
-      zuid: u.zuid,
-      zoomUserId: setupEntry?.zoomUserId,
-      email: u.email,
-      name: `${u.first_name} ${u.last_name}`,
-      hasZohoCalender: !!zohoMailAccount,
-      timeZone: zohoMailAccount?.timeZone || u.time_zone,
-      status: setupEntry?.status || "Not Started",
-    };
-  }) as {
+      return {
+        userId: setupEntry?.userId,
+        zuid: u.zuid,
+        zoomUserId: setupEntry?.zoomUserId,
+        email: u.email,
+        name: `${u.first_name} ${u.last_name}`,
+        hasZohoCalender: true || !!zohoMailAccount,
+        timeZone: zohoMailAccount?.timeZone || u.time_zone,
+        status: setupEntry?.status || "Not Started",
+      };
+    }) as {
     userId: string;
     zuid: string;
     email: string;
