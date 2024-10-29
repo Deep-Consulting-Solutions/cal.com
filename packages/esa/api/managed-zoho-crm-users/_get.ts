@@ -56,7 +56,7 @@ export async function getHandler(req: NextApiRequest) {
     name: string;
     hasZohoCalender: boolean;
     timeZone: string;
-    status: "Not Started" | "Completed" | "In Progress";
+    status: "Not Started" | "Completed" | "In Progress" | "Pending Completion";
   }[];
 
   const withSchedule = await Promise.all(

@@ -11,7 +11,7 @@ import { appKeysSchema as zohoKeysSchema } from "@calcom/zohocalendar/zod";
 import { sendMail } from "../../lib/mailer";
 import setupZohoCalenderOauthEmail from "../../lib/mailer/templates/setupZohoCalenderOauthEmail";
 
-async function patchHandler(req: NextApiRequest) {
+async function postHandler(req: NextApiRequest) {
   const $req = req as NextApiRequest & { prisma: any };
 
   const { zuid } = $req.body;
@@ -30,8 +30,8 @@ async function patchHandler(req: NextApiRequest) {
     throw new Error("zoho user managed setup has not started");
   }
 
-  if (existingSetupEntry.status !== "In Progress") {
-    throw new Error("zoho user managed setup is not in progress");
+  if (existingSetupEntry.status !== "Pending Completion") {
+    throw new Error("zoho user managed setup is not pending completion");
   }
 
   const user = await prisma.user.findUnique({
@@ -89,4 +89,4 @@ async function patchHandler(req: NextApiRequest) {
   };
 }
 
-export default defaultResponder(patchHandler);
+export default defaultResponder(postHandler);

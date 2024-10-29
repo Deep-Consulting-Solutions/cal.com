@@ -210,6 +210,15 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
     html: setupZohoCalenderOauthEmail({ url }),
   });
 
+  await prisma.zohoSchedulingSetup.update({
+    where: {
+      id: managedSetup.id,
+    },
+    data: {
+      status: "Pending Completion",
+    },
+  });
+
   return {
     message: "Managed setup in progress",
     data: {
