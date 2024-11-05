@@ -7,6 +7,7 @@ import { default as DatePickerComponent } from "@calcom/features/calendars/DateP
 import { useNonEmptyScheduleDays } from "@calcom/features/schedules";
 import { weekdayToWeekIndex } from "@calcom/lib/date-fns";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
+import { BookerLayouts } from "@calcom/prisma/zod-utils";
 
 import { useBookerStore } from "../store";
 import type { useEventReturnType, useScheduleForEventReturnType } from "../utils/event";
@@ -41,7 +42,8 @@ export const DatePicker = ({
         setShowOneMonth(false);
         setMonth(date.format("YYYY-MM"));
         setDayCount(null); // Whenever the month is changed, we nullify getting X days
-        if (layout !== "mobile") {
+        if (layout === BookerLayouts.COLUMN_VIEW || layout === BookerLayouts.WEEK_VIEW) {
+          // If we're on column view or week view, we need to set the date
           setSelectedDate(date.format("YYYY-MM-DD"));
         }
       }}

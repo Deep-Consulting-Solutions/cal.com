@@ -25,7 +25,7 @@ export const fadeInUp = {
   initial: "hidden",
   exit: "hidden",
   animate: "visible",
-  transition: { ease: "easeInOut", delay: 0.1 },
+  transition: { ease: "easeIn", delay: 0.1 },
 };
 
 export const fadeInRight = {
@@ -74,6 +74,17 @@ export const resizeAnimationConfig: ResizeAnimationConfig = {
   month_view: {
     default: {
       minHeight: "480px",
+      height: "auto",
+      gridTemplateAreas: `
+          "meta"
+          "main"
+        `,
+      gridTemplateColumns: "100%",
+      gridTemplateRows: "minmax(min-content,max-content) auto",
+    },
+    selecting_date: {
+      minHeight: "480px",
+      width: "calc(var(--booker-main-width))",
       height: "auto",
       gridTemplateAreas: `
           "meta"

@@ -37,7 +37,7 @@ export const TimezoneWithLabel = ({
   return (
     <div className={classNames("flex flex-col", className)}>
       {!isPending && (
-        <div className={classNames("text-default mb-2 text-sm", labelClassName)}>{t("timezone")}</div>
+        <div className={classNames("text-default mb-2 mt-3 text-sm", labelClassName)}>{t("timezone")}</div>
       )}
       <div className="relative z-10">
         {isPending && (

@@ -33,7 +33,7 @@ export const AvailableTimesHeader = ({
       <span
         className={classNames(
           isColumnView && "w-full text-center",
-          isColumnView ? "text-subtle text-xs uppercase" : "text-emphasis font-semibold"
+          isColumnView ? "text-subtle text-xs uppercase" : "text-subtle w-full text-center font-semibold"
         )}>
         <span className={classNames(isToday && "!text-default")}>
           {isMonthView
