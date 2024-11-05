@@ -10,9 +10,9 @@ import classNames from "@calcom/lib/classNames";
 import { daysInMonth, yyyymmdd } from "@calcom/lib/date-fns";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { weekdayNames } from "@calcom/lib/weekday";
+import { BookerLayouts } from "@calcom/prisma/zod-utils";
 import { Button, SkeletonText } from "@calcom/ui";
-import { ChevronLeft, ChevronRight } from "@calcom/ui/components/icon";
-import { ArrowRight } from "@calcom/ui/components/icon";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from "@calcom/ui/components/icon";
 
 interface DayObject {
   day: null | Dayjs;
@@ -225,7 +225,7 @@ export const Day = ({
       type="button"
       style={disabled ? { ...disabledDateButtonEmbedStyles } : { ...enabledDateButtonEmbedStyles }}
       className={classNames(
-        "disabled:text-bookinglighter absolute bottom-0 left-0 right-0 top-0 mx-auto w-full rounded-full border-2 border-transparent text-center text-sm font-medium disabled:cursor-default disabled:border-transparent disabled:font-light lg:top-1 lg:h-12 lg:w-12 ",
+        "disabled:text-bookinglighter absolute bottom-0 left-0 right-0 top-0 mx-auto w-full rounded-full border-2 border-transparent text-center text-sm font-medium disabled:cursor-default disabled:border-transparent disabled:font-light lg:top-[1px] lg:h-12 lg:w-12 ",
         active
           ? "dark:bg-brand-default text-brand bg-[#0069FF] font-bold"
           : !disabled
@@ -269,6 +269,17 @@ const NoAvailabilityOverlay = ({
   );
 };
 
+const GoBackOverlay = ({ goBack }: { goBack: () => void }) => {
+  return (
+    <div className="bg-muted border-subtle absolute left-1/2 top-40 -mt-10 w-max -translate-x-1/2 -translate-y-1/2 transform rounded-md border p-8 shadow-sm">
+      <h4 className="text-emphasis mb-4 font-medium">No more availability from here on</h4>
+      <Button onClick={goBack} color="primaryAlt" StartIcon={ArrowLeft} data-testid="go-back">
+        Go Back
+      </Button>
+    </div>
+  );
+};
+
 const Days = ({
   minDate,
   excludedDates = [],
@@ -278,15 +289,19 @@ const Days = ({
   selected,
   month,
   nextMonthButton,
+  goBack,
   eventSlug,
   showOneMonth,
+  limitReached,
   ...props
 }: Omit<DatePickerProps, "locale" | "className" | "weekStart"> & {
   DayComponent?: React.FC<React.ComponentProps<typeof Day>>;
   browsingDate: Dayjs;
   weekStart: number;
   month: string | null;
+  limitReached: boolean;
   nextMonthButton: () => void;
+  goBack: () => void;
 }) => {
   const { daysToRenderForTheMonth, weeks, includedDatesInMonth, shouldRenderNextMonth } = useCalendarDays({
     browsingDate,
@@ -345,7 +360,7 @@ const Days = ({
   }, [selected, daysToRenderForTheMonth, props]);
 
   useEffect(() => {
-    if (layout !== "mobile") {
+    if (layout === BookerLayouts.COLUMN_VIEW || layout === BookerLayouts.WEEK_VIEW) {
       handleInitialDateSelection();
     }
   }, [handleInitialDateSelection, layout]);
@@ -416,12 +431,12 @@ const Days = ({
                     <>
                       {idx === transitionIndex && (
                         <>
-                          <div className="absolute left-[-3px] right-[-3px] top-[-3px] h-[2px] bg-gray-300" />
+                          <div className="absolute left-[-8px] right-[-3px] top-[-0.5rem] h-[2px] bg-gray-300" />
                           {idx !== 0 && (
-                            <div className="absolute left-[-3px] top-[-1px] h-[104%] w-[2px] bg-gray-300" />
+                            <div className="absolute left-[-8px] top-[-8px] h-[133%] w-[2px] bg-gray-300" />
                           )}
                           {idx === 0 && (
-                            <div className="text-white-700 absolute left-[-3px] top-[2px] text-xs">
+                            <div className="text-white-700 absolute left-[-3px] top-[-0.25rem] text-xs">
                               {browsingDate.add(1, "month").format("MMMM")}
                             </div>
                           )}
@@ -429,9 +444,9 @@ const Days = ({
                       )}
                       {idx < transitionIndex && (
                         <div className="relative">
-                          <div className="absolute bottom-[-3px] left-[-3px] right-[-3px] h-[2px] bg-gray-300" />
+                          <div className="absolute bottom-[-8px] left-[-10px] right-[-10px] h-[2px] bg-gray-300" />
                           {idx === 0 && (
-                            <div className="text-white-700 absolute left-[-3px] top-[2px] text-xs">
+                            <div className="text-white-700 absolute left-[-3px] top-[0.5rem] text-xs">
                               {browsingDate.add(1, "month").format("MMMM")}
                             </div>
                           )}
@@ -439,7 +454,7 @@ const Days = ({
                       )}
                       {idx > transitionIndex && (
                         <>
-                          <div className="absolute left-[-3px] right-[-3px] top-[-3px] h-[2px] bg-gray-300" />
+                          <div className="absolute left-[-14px] right-[-3px] top-[-0.5rem] h-[2px] bg-gray-300" />
                         </>
                       )}
                     </>
@@ -451,8 +466,11 @@ const Days = ({
         );
       })}
 
-      {!props.isPending && includedDatesInMonth?.length === 0 && (
+      {!props.isPending && includedDatesInMonth?.length === 0 && !limitReached && (
         <NoAvailabilityOverlay month={month} nextMonthButton={nextMonthButton} />
+      )}
+      {!props.isPending && includedDatesInMonth?.length === 0 && limitReached && (
+        <GoBackOverlay goBack={goBack} />
       )}
     </>
   );
@@ -481,6 +499,12 @@ const DatePicker = ({
     showOneMonth,
   });
 
+  const monthFromStore = useBookerStore((state) => state.month, shallow);
+  const presentMonth = dayjs().startOf("month");
+  const parsedMonth = dayjs(monthFromStore, "YYYY-MM");
+  const monthDifference = parsedMonth.diff(presentMonth, "month");
+  const limitReached = monthDifference > 12;
+
   const changeMonth = useCallback(
     (newMonth: number) => {
       setAutoNavigating(false); // Disable auto-navigation on manual action
@@ -490,6 +514,13 @@ const DatePicker = ({
     },
     [browsingDate, onMonthChange]
   );
+  const goBack = useCallback(() => {
+    setAutoNavigating(false); // Disable auto-navigation on manual action
+    if (onMonthChange) {
+      onMonthChange(dayjs().startOf("month"));
+    }
+  }, [onMonthChange]);
+
   const month = browsingDate
     ? new Intl.DateTimeFormat(i18n.language, { month: "long" }).format(
         new Date(browsingDate.year(), browsingDate.month())
@@ -543,8 +574,8 @@ const DatePicker = ({
   return (
     <div className={className}>
       <div className="mb-1 flex items-center justify-center text-xl">
-        <div className="text-emphasis">
-          <div className="flex items-center justify-center">
+        <div className="text-emphasis w-full">
+          <div className="flex w-full items-center justify-between">
             <Button
               className={classNames(
                 "group p-1 opacity-70 hover:opacity-100 rtl:rotate-180",
@@ -568,18 +599,19 @@ const DatePicker = ({
               color="minimal"
               variant="icon"
               StartIcon={ChevronRight}
+              disabled={limitReached}
             />
           </div>
         </div>
       </div>
-      <div className="border-subtle mb-2 grid grid-cols-7 gap-4 border-b border-t text-center md:mb-0 md:border-0">
+      <div className="mb-2 grid grid-cols-7 gap-4 text-center">
         {weekdayNames(locale, weekStart, "short").map((weekDay) => (
           <div key={weekDay} className="text-emphasis my-4 text-xs font-medium uppercase tracking-widest">
             {weekDay}
           </div>
         ))}
       </div>
-      <div className="relative grid grid-cols-7 gap-1 text-center">
+      <div className="relative grid grid-cols-7 gap-4 text-center">
         <Days
           weekStart={weekStart}
           selected={selected}
@@ -587,7 +619,9 @@ const DatePicker = ({
           browsingDate={browsingDate}
           month={month}
           nextMonthButton={() => changeMonth(+1)}
+          goBack={goBack}
           showOneMonth={showOneMonth}
+          limitReached={limitReached}
         />
       </div>
     </div>

@@ -82,6 +82,7 @@ export const AvailableTimeSlots = ({
 
   return (
     <>
+      {layout === BookerLayouts.MONTH_VIEW && <p className="my-2 text-center font-semibold">Select a Time</p>}
       {layout !== "mobile" && (
         <div className="flex">
           {isLoading ? (
