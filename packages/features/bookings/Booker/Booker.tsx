@@ -436,7 +436,7 @@ const BookerComponent = ({
             <BookerSection
               key="book-event-form"
               area="main"
-              className="border-subtle sticky top-0 ml-[-1px] h-full p-6"
+              className="border-subtle sticky top-0 ml-[-1px] p-6"
               {...fadeInLeft}
               visible={bookerState === "booking" && !shouldShowFormInDialog}>
               {EventBooker}
@@ -487,9 +487,8 @@ const BookerComponent = ({
                 layout === BookerLayouts.COLUMN_VIEW
               }
               className={classNames(
-                "border-subtle rtl:border-default flex h-full w-full flex-col overflow-x-auto px-5 py-3 pb-0 rtl:border-r ltr:md:border-l",
-                layout === BookerLayouts.MONTH_VIEW &&
-                  "h-full overflow-hidden md:w-[var(--booker-timeslots-width)]",
+                "border-subtle rtl:border-default flex w-full flex-col overflow-hidden px-5 py-3 pb-0 rtl:border-r ltr:md:border-l",
+                layout === BookerLayouts.MONTH_VIEW && "h-full md:w-[var(--booker-timeslots-width)]",
                 layout !== BookerLayouts.MONTH_VIEW && "sticky top-0"
               )}
               ref={timeslotsRef}
