@@ -194,7 +194,7 @@ export const AvailableTimes = ({
 
   return (
     <div className={classNames("text-default flex flex-col", className)}>
-      <div className="h-full pb-4">
+      <div className="h-[calc(100vh-420px)] pb-4 sm:h-full">
         {!slots.length && (
           <div className="bg-subtle border-subtle flex h-full flex-col items-center rounded-md border p-6 dark:bg-transparent">
             <CalendarX2 className="text-muted mb-2 h-4 w-4" />
