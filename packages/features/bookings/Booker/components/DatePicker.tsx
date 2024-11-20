@@ -32,10 +32,7 @@ export const DatePicker = ({
   return (
     <DatePickerComponent
       isPending={schedule.isPending}
-      onChange={(date: Dayjs | null, showOneMonth?: boolean) => {
-        if (showOneMonth) {
-          setShowOneMonth(true);
-        }
+      onChange={(date: Dayjs | null) => {
         setSelectedDate(date === null ? date : date.format("YYYY-MM-DD"));
       }}
       onMonthChange={(date: Dayjs) => {

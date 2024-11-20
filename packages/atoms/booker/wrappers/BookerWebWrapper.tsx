@@ -14,10 +14,12 @@ import { useCalendars } from "@calcom/features/bookings/Booker/components/hooks/
 import { useSlots } from "@calcom/features/bookings/Booker/components/hooks/useSlots";
 import { useVerifyCode } from "@calcom/features/bookings/Booker/components/hooks/useVerifyCode";
 import { useVerifyEmail } from "@calcom/features/bookings/Booker/components/hooks/useVerifyEmail";
+import type { EventTypeSetup } from "@calcom/features/bookings/Booker/store";
 import { useBookerStore, useInitializeBookerStore } from "@calcom/features/bookings/Booker/store";
 import { useEvent, useScheduleForEvent } from "@calcom/features/bookings/Booker/utils/event";
 import { useRouterQuery } from "@calcom/lib/hooks/useRouterQuery";
 import { BookerLayouts } from "@calcom/prisma/zod-utils";
+import { trpc } from "@calcom/trpc/react";
 
 import type { AtomsGlobalConfigProps } from "../../types";
 
@@ -29,6 +31,7 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
   const searchParams = useSearchParams();
   const event = useEvent();
   const bookerLayout = useBookerLayout(event.data);
+  const { data } = trpc.viewer.eventTypes.get.useQuery({ id: event.data?.id as number });
 
   const selectedDate = searchParams?.get("date");
   const isRedirect = searchParams?.get("redirected") === "true" || false;
@@ -42,6 +45,7 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
   useInitializeBookerStore({
     ...props,
     eventId: event?.data?.id,
+    eventType: data?.eventType as EventTypeSetup,
     rescheduleUid,
     bookingUid: bookingUid,
     layout: bookerLayout.defaultLayout,

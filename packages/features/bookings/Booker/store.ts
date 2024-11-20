@@ -4,10 +4,13 @@ import { create } from "zustand";
 import dayjs from "@calcom/dayjs";
 import { BOOKER_NUMBER_OF_DAYS_TO_LOAD } from "@calcom/lib/constants";
 import { BookerLayouts } from "@calcom/prisma/zod-utils";
+import type { RouterOutputs } from "@calcom/trpc/react";
 
 import type { GetBookingType } from "../lib/get-booking";
 import type { BookerState, BookerLayout } from "./types";
 import { updateQueryParam, getQueryParam, removeQueryParam } from "./utils/query-param";
+
+export type EventTypeSetup = RouterOutputs["viewer"]["eventTypes"]["get"]["eventType"];
 
 /**
  * Arguments passed into store initializer, containing
@@ -18,6 +21,7 @@ type StoreInitializeType = {
   eventSlug: string;
   // Month can be undefined if it's not passed in as a prop.
   eventId: number | undefined;
+  eventType: EventTypeSetup;
   layout: BookerLayout;
   month?: string;
   bookingUid?: string | null;
@@ -46,6 +50,7 @@ export type BookerStore = {
   username: string | null;
   eventSlug: string | null;
   eventId: number | null;
+  eventType: EventTypeSetup | null;
   /**
    * Verified booker email.
    * Needed in case user turns on Requires Booker Email Verification for an event
@@ -171,13 +176,14 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
       return;
     }
 
+    const layout = get().layout;
     const currentSelection = dayjs(get().selectedDate);
     const newSelection = dayjs(selectedDate);
     set({ selectedDate });
     updateQueryParam("date", selectedDate ?? "");
 
     // Setting month make sure small calendar in fullscreen layouts also updates.
-    if (newSelection.month() !== currentSelection.month()) {
+    if (layout !== BookerLayouts.MONTH_VIEW && newSelection.month() !== currentSelection.month()) {
       set({ month: newSelection.format("YYYY-MM") });
       updateQueryParam("month", newSelection.format("YYYY-MM"));
     }
@@ -202,6 +208,7 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
   username: null,
   eventSlug: null,
   eventId: null,
+  eventType: null,
   verifiedEmail: null,
   setVerifiedEmail: (email: string | null) => {
     set({ verifiedEmail: email });
@@ -232,6 +239,7 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
     eventSlug,
     month,
     eventId,
+    eventType,
     rescheduleUid = null,
     bookingUid = null,
     bookingData = null,
@@ -258,6 +266,7 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
       username,
       eventSlug,
       eventId,
+      eventType,
       org,
       rescheduleUid,
       bookingUid,
@@ -334,6 +343,7 @@ export const useInitializeBookerStore = ({
   eventSlug,
   month,
   eventId,
+  eventType,
   rescheduleUid = null,
   bookingData = null,
   verifiedEmail = null,
@@ -350,6 +360,7 @@ export const useInitializeBookerStore = ({
       eventSlug,
       month,
       eventId,
+      eventType,
       rescheduleUid,
       bookingData,
       layout,
@@ -366,6 +377,7 @@ export const useInitializeBookerStore = ({
     eventSlug,
     month,
     eventId,
+    eventType,
     rescheduleUid,
     bookingData,
     layout,
