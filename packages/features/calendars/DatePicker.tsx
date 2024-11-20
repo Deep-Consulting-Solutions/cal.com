@@ -433,7 +433,7 @@ const Days = ({
                         <>
                           <div className="absolute left-[-8px] right-[-3px] top-[-0.5rem] h-[2px] bg-gray-300" />
                           {idx !== 0 && (
-                            <div className="absolute left-[-8px] top-[-8px] h-[133%] w-[2px] bg-gray-300" />
+                            <div className="absolute bottom-[-6px] left-[-8px] top-[-6px] w-[2px] bg-gray-300" />
                           )}
                           {idx === 0 && (
                             <div className="text-white-700 absolute left-[-3px] top-[-0.25rem] text-xs">
@@ -499,11 +499,12 @@ const DatePicker = ({
     showOneMonth,
   });
 
-  const monthFromStore = useBookerStore((state) => state.month, shallow);
-  const presentMonth = dayjs().startOf("month");
+  const [monthFromStore, eventType] = useBookerStore((state) => [state.month, state.eventType], shallow);
+  const periodEndDate = eventType ? eventType.periodEndDate : null;
+  const periodEndDateDayjs = dayjs(periodEndDate);
   const parsedMonth = dayjs(monthFromStore, "YYYY-MM");
-  const monthDifference = parsedMonth.diff(presentMonth, "month");
-  const limitReached = monthDifference > 12;
+  const isPeriodEndBeforeParsedMonth = periodEndDateDayjs.isBefore(parsedMonth, "month");
+  const limitReached = isPeriodEndBeforeParsedMonth;
 
   const changeMonth = useCallback(
     (newMonth: number) => {
@@ -574,7 +575,7 @@ const DatePicker = ({
   return (
     <div className={className}>
       <div className="mb-1 flex items-center justify-center text-xl">
-        <div className="text-emphasis w-full">
+        <div className="text-emphasis flex w-full justify-center">
           <div className="flex w-full items-center justify-between">
             <Button
               className={classNames(
@@ -589,7 +590,7 @@ const DatePicker = ({
               variant="icon"
               StartIcon={ChevronLeft}
             />
-            <div className="text-default mx-4 text-base">
+            <div className="text-default text-base">
               {browsingDate ? monthText : <SkeletonText className="h-8 w-24" />}
             </div>
             <Button

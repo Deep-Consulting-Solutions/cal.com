@@ -25,7 +25,7 @@ export const fadeInUp = {
   initial: "hidden",
   exit: "hidden",
   animate: "visible",
-  transition: { ease: "easeIn", delay: 0.1 },
+  transition: { ease: "easeInOut", delay: 0.1 },
 };
 
 export const fadeInRight = {
@@ -188,7 +188,6 @@ export const useBookerResizeAnimation = (layout: BookerLayout, state: BookerStat
   const prefersReducedMotion = useReducedMotion();
   const [animationScope, animate] = useAnimate();
   const isEmbed = typeof window !== "undefined" && window?.isEmbed?.();
-  ``;
   useEffect(() => {
     const animationConfig = resizeAnimationConfig[layout][state] || resizeAnimationConfig[layout].default;
 
