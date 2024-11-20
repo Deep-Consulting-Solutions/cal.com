@@ -21,7 +21,7 @@ type StoreInitializeType = {
   eventSlug: string;
   // Month can be undefined if it's not passed in as a prop.
   eventId: number | undefined;
-  eventType: EventTypeSetup;
+  eventType?: EventTypeSetup;
   layout: BookerLayout;
   month?: string;
   bookingUid?: string | null;
@@ -50,7 +50,7 @@ export type BookerStore = {
   username: string | null;
   eventSlug: string | null;
   eventId: number | null;
-  eventType: EventTypeSetup | null;
+  eventType?: EventTypeSetup | null;
   /**
    * Verified booker email.
    * Needed in case user turns on Requires Booker Email Verification for an event
