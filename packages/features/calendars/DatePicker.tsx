@@ -499,12 +499,30 @@ const DatePicker = ({
     showOneMonth,
   });
 
-  const [monthFromStore, eventType] = useBookerStore((state) => [state.month, state.eventType], shallow);
-  const periodEndDate = eventType ? eventType.periodEndDate : null;
-  const periodEndDateDayjs = dayjs(periodEndDate);
-  const parsedMonth = dayjs(monthFromStore, "YYYY-MM");
-  const isPeriodEndBeforeParsedMonth = periodEndDateDayjs.isBefore(parsedMonth, "month");
-  const limitReached = isPeriodEndBeforeParsedMonth;
+  const [monthFromStore, periodEndDate, periodType, periodDays] = useBookerStore(
+    (state) => [state.month, state.periodEndDate, state.periodType, state.periodDays],
+    shallow
+  );
+  const limitReached = useMemo(() => {
+    const periodEndDateDayjs = dayjs(periodEndDate);
+    const parsedMonth = dayjs(monthFromStore, "YYYY-MM");
+
+    if (periodType === "UNLIMITED") {
+      return false;
+    }
+    if (periodType === "RANGE") {
+      return periodEndDateDayjs.isBefore(parsedMonth, "month");
+    }
+    if (periodType === "ROLLING" && periodDays) {
+      const newDate = dayjs().add(periodDays, "day");
+      const isBefore = newDate.isBefore(parsedMonth, "month");
+      return isBefore && includedDatesInMonth?.length === 0;
+    }
+
+    return false;
+  }, [periodEndDate, monthFromStore, periodType, periodDays, includedDatesInMonth?.length]);
+
+  console.log({ limitReached, periodEndDate, periodType, periodDays });
 
   const changeMonth = useCallback(
     (newMonth: number) => {
