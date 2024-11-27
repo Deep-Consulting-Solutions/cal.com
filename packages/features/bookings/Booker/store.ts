@@ -220,6 +220,8 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
   },
   month: getQueryParam("month") || getQueryParam("date") || dayjs().format("YYYY-MM"),
   setMonth: (month: string | null) => {
+    const currentMonth = get().month;
+    if (currentMonth === month) return;
     set({ month, selectedTimeslot: null });
     updateQueryParam("month", month ?? "");
     get().setSelectedDate(null);

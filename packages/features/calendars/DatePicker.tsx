@@ -378,16 +378,20 @@ const Days = ({
         // Check if this week contains the transition from current month to next month
         const isTransitionRow = transitionIndex !== -1;
         const isUnavailableWeek = week.every(({ disabled }) => disabled);
+        const isNextWeekUnavailable =
+          weekIndex < weeks.length - 1 && weeks[weekIndex + 1].every(({ disabled }) => disabled);
 
         // Render "No Availability" if this week is unavailable and the previous week was available
         if (shouldRenderNextMonth && isUnavailableWeek && !isTransitionRow) {
           if (!wasPreviousWeekUnavailable) {
             wasPreviousWeekUnavailable = true;
-            return (
-              <div key={`week-${weekIndex}`} className="text-muted col-span-7 p-4 text-center text-sm">
-                No availability
-              </div>
-            );
+            if (isNextWeekUnavailable) {
+              return (
+                <div key={`week-${weekIndex}`} className="text-muted col-span-7 p-4 text-center text-sm">
+                  No availability
+                </div>
+              );
+            }
           } else {
             // Skip rendering consecutive "No Availability" divs
             wasPreviousWeekUnavailable = true;
@@ -526,7 +530,6 @@ const DatePicker = ({
 
   const changeMonth = useCallback(
     (newMonth: number) => {
-      setAutoNavigating(false); // Disable auto-navigation on manual action
       if (onMonthChange) {
         onMonthChange(browsingDate.add(newMonth, "month"));
       }
@@ -534,7 +537,6 @@ const DatePicker = ({
     [browsingDate, onMonthChange]
   );
   const goBack = useCallback(() => {
-    setAutoNavigating(false); // Disable auto-navigation on manual action
     if (onMonthChange) {
       onMonthChange(dayjs().startOf("month"));
     }
@@ -581,14 +583,20 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
-  // Effect to auto-navigate when no dates are available in the current month
+  // Effect to auto-navigate when no dates are available in the current month and next month
   useEffect(() => {
-    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
-      changeMonth(+1);
-    } else {
-      setAutoNavigating(false); // Reset the flag after the navigation is complete
+    if (!autoNavigating) return;
+
+    if (includedDatesInMonth?.length === 0) {
+      if (includedDatesNextMonth?.length > 0) {
+        changeMonth(+1);
+      } else {
+        changeMonth(+2);
+      }
     }
-  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length, autoNavigating]);
+    setAutoNavigating(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoNavigating, includedDatesInMonth?.length, includedDatesNextMonth?.length]);
 
   return (
     <div className={className}>
