@@ -77,16 +77,10 @@ export const useScheduleForEvent = ({
   const isTeam = !!event.data?.team?.parentId;
 
   console.log({
-    prefetchNextMonth,
-    username,
-    eventSlug,
-    eventId,
-    month,
-    duration,
-    monthCount,
-    dayCount,
-    selectedDate,
-    timezone,
+    usernameFromStore,
+    eventSlugFromStore,
+    monthFromStore,
+    durationFromStore,
     event: event.data,
   });
 
