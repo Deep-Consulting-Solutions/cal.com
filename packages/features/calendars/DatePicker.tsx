@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useState } from "react";
+import { useEffect, useMemo, useCallback, useRef } from "react";
 import { shallow } from "zustand/shallow";
 
 import type { Dayjs } from "@calcom/dayjs";
@@ -489,7 +489,7 @@ const DatePicker = ({
   showOneMonth,
   ...passThroughProps
 }: DatePickerProps & Partial<React.ComponentProps<typeof Days>>) => {
-  const [autoNavigating, setAutoNavigating] = useState(true); // Track automatic navigation
+  const shouldAutoNavigate = useRef(true);
   const browsingDate = passThroughProps.browsingDate || dayjs().startOf("month");
   const nextMonthBrowsingDate = browsingDate.add(1, "month");
   const { i18n } = useLocale();
@@ -583,20 +583,20 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
-  // Effect to auto-navigate when no dates are available in the current month and next month
-  useEffect(() => {
-    if (!autoNavigating) return;
+  console.log({ shouldAutoNavigate: shouldAutoNavigate.current });
 
-    if (includedDatesInMonth?.length === 0) {
-      if (includedDatesNextMonth?.length > 0) {
+  useEffect(() => {
+    if (!shouldAutoNavigate.current || limitReached) return;
+    if (changeMonth) {
+      if (includedDatesInMonth.length === 0 && includedDatesNextMonth.length > 1) {
         changeMonth(+1);
-      } else {
+      }
+      if (includedDatesInMonth.length === 0 && includedDatesNextMonth.length === 0) {
         changeMonth(+2);
       }
     }
-    setAutoNavigating(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoNavigating, includedDatesInMonth?.length, includedDatesNextMonth?.length]);
+    shouldAutoNavigate.current = false;
+  }, [changeMonth, includedDatesInMonth.length, includedDatesNextMonth.length, limitReached]);
 
   return (
     <div className={className}>
