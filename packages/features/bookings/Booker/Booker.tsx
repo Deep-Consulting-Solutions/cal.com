@@ -128,6 +128,8 @@ const BookerComponent = ({
 
   const { t } = useLocale();
 
+  console.log({ availableSlots, nextSlots, addonDays, nonEmptyScheduleDays, selectedDate });
+
   useBrandColors({
     brandColor: event.data?.profile.brandColor ?? DEFAULT_LIGHT_BRAND_COLOR,
     darkBrandColor: event.data?.profile.darkBrandColor ?? DEFAULT_DARK_BRAND_COLOR,
@@ -163,9 +165,11 @@ const BookerComponent = ({
           attendees: undefined,
         });
       }
+      setBookerState("selecting_time_alt");
     }
     if (bookerState === "selecting_time" || bookerState === "selecting_time_alt") {
       setSelectedDate(null);
+      setSelectedTimeslot(null);
       setBookerState("selecting_date");
     }
   }, [
