@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useRef } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { shallow } from "zustand/shallow";
 
 import type { Dayjs } from "@calcom/dayjs";
@@ -489,7 +489,7 @@ const DatePicker = ({
   showOneMonth,
   ...passThroughProps
 }: DatePickerProps & Partial<React.ComponentProps<typeof Days>>) => {
-  const shouldAutoNavigate = useRef(true);
+  const [autoNavigating, setAutoNavigating] = useState(true);
   const browsingDate = passThroughProps.browsingDate || dayjs().startOf("month");
   const nextMonthBrowsingDate = browsingDate.add(1, "month");
   const { i18n } = useLocale();
@@ -583,20 +583,15 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
-  console.log({ shouldAutoNavigate: shouldAutoNavigate.current });
+  console.log({ autoNavigating });
 
   useEffect(() => {
-    if (!shouldAutoNavigate.current || limitReached) return;
-    if (changeMonth) {
-      if (includedDatesInMonth.length === 0 && includedDatesNextMonth.length > 1) {
-        changeMonth(+1);
-      }
-      if (includedDatesInMonth.length === 0 && includedDatesNextMonth.length === 0) {
-        changeMonth(+2);
-      }
+    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
+      changeMonth(+1);
+    } else {
+      setAutoNavigating(false);
     }
-    shouldAutoNavigate.current = false;
-  }, [changeMonth, includedDatesInMonth.length, includedDatesNextMonth.length, limitReached]);
+  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length, autoNavigating]);
 
   return (
     <div className={className}>
