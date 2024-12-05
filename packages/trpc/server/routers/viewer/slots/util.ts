@@ -485,14 +485,17 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions) {
     currentSeats,
   };
 
-  const isTimeWithinBounds = (_time: Parameters<typeof isTimeOutOfBounds>[0]) =>
-    !isTimeOutOfBounds(_time, {
+  const isTimeWithinBounds = (_time: Parameters<typeof isTimeOutOfBounds>[0]) =>{ 
+    const isTimeWithinBounds = !isTimeOutOfBounds(_time, {
       periodType: eventType.periodType,
       periodStartDate: eventType.periodStartDate,
       periodEndDate: eventType.periodEndDate,
       periodCountCalendarDays: eventType.periodCountCalendarDays,
       periodDays: eventType.periodDays,
     });
+    console.log({_time, isTimeWithinBounds})
+    return isTimeWithinBounds;
+  }
 
   const getSlotsTime = 0;
   const checkForAvailabilityTime = 0;
