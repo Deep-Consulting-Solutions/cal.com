@@ -76,14 +76,6 @@ export const useScheduleForEvent = ({
 
   const isTeam = !!event.data?.team?.parentId;
 
-  console.log({
-    usernameFromStore,
-    eventSlugFromStore,
-    monthFromStore,
-    durationFromStore,
-    event: event.data,
-  });
-
   return useSchedule({
     username: usernameFromStore ?? username,
     eventSlug: eventSlugFromStore ?? eventSlug,

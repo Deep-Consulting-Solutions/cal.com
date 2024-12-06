@@ -122,8 +122,6 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
     selectedDate,
   });
 
-  console.log({ schedule: schedule.data, selectedDate });
-
   const verifyCode = useVerifyCode({
     onSuccess: () => {
       verifyEmail.setVerifiedEmail(bookerForm.formEmail);
