@@ -501,7 +501,7 @@ const BookerComponent = ({
                 extraDays={extraDays}
                 limitHeight={layout === BookerLayouts.MONTH_VIEW || layout === "mobile"}
                 schedule={schedule?.data}
-                isLoading={schedule.isPending}
+                isLoading={schedule.isLoading}
                 seatsPerTimeSlot={event.data?.seatsPerTimeSlot}
                 showAvailableSeatsCount={event.data?.seatsShowAvailabilityCount}
                 event={event.data}
