@@ -128,8 +128,6 @@ const BookerComponent = ({
 
   const { t } = useLocale();
 
-  console.log({ availableSlots, nextSlots, addonDays, nonEmptyScheduleDays, selectedDate });
-
   useBrandColors({
     brandColor: event.data?.profile.brandColor ?? DEFAULT_LIGHT_BRAND_COLOR,
     darkBrandColor: event.data?.profile.darkBrandColor ?? DEFAULT_DARK_BRAND_COLOR,

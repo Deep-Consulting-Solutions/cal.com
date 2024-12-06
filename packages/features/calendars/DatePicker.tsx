@@ -526,8 +526,6 @@ const DatePicker = ({
     return false;
   }, [periodEndDate, monthFromStore, periodType, periodDays, includedDatesInMonth?.length]);
 
-  console.log({ limitReached, periodEndDate, periodType, periodDays });
-
   const changeMonth = useCallback(
     (newMonth: number) => {
       setAutoNavigating(false);
@@ -585,16 +583,13 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
-  console.log({ autoNavigating });
-
   useEffect(() => {
+    if (passThroughProps.isPending || limitReached) return;
     if (autoNavigating && includedDatesInMonth?.length === 0) {
       changeMonth(+1);
-    } else {
-      setAutoNavigating(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includedDatesInMonth?.length, autoNavigating]);
+    setAutoNavigating(false);
+  }, [includedDatesInMonth?.length, autoNavigating, limitReached, passThroughProps.isPending, changeMonth]);
 
   return (
     <div className={className}>
