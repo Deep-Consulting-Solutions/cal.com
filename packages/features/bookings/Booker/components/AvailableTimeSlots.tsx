@@ -65,6 +65,8 @@ export const AvailableTimeSlots = ({
     return;
   };
 
+  console.log({ isLoading });
+
   const nonEmptyScheduleDays = useNonEmptyScheduleDays(schedule?.slots);
   const nonEmptyScheduleDaysFromSelectedDate = nonEmptyScheduleDays.filter(
     (slot) => dayjs(selectedDate).diff(slot, "day") <= 0
