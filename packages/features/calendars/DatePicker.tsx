@@ -586,12 +586,16 @@ const DatePicker = ({
   console.log({ autoNavigating });
 
   useEffect(() => {
-    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
-      changeMonth(+1);
-    } else {
-      setAutoNavigating(false);
+    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length === 0) {
+      changeMonth(+2);
+      return;
     }
-  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length, autoNavigating]);
+    if (autoNavigating && includedDatesInMonth?.length === 0) {
+      changeMonth(+1);
+      return;
+    }
+    setAutoNavigating(false);
+  }, [includedDatesInMonth?.length, autoNavigating]);
 
   return (
     <div className={className}>
