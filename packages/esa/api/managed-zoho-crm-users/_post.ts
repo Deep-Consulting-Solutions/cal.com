@@ -203,12 +203,14 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
 
   const url = `${OAUTH_BASE_URL}/auth?${query}`;
 
-  await sendMail({
-    from: "buffer-sender@buffer-staging.esa-emails.technology", // TODO: get from env
-    to: email,
-    subject: "URGENT - Complete Your Scheduling Setup",
-    html: setupZohoCalenderOauthEmail({ url }),
-  });
+  if (process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS) {
+    await sendMail({
+      from: process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS,
+      to: email,
+      subject: "URGENT - Complete Your Scheduling Setup",
+      html: setupZohoCalenderOauthEmail({ url }),
+    });
+  }
 
   await prisma.zohoSchedulingSetup.update({
     where: {
