@@ -54,24 +54,7 @@ export const useSchedule = ({
   } else {
     startTime = monthDayjs.startOf("month").toISOString();
     endTime = (prefetchNextMonth ? nextMonthDayjs : monthDayjs).endOf("month").toISOString();
-    console.log({ startTime, endTime });
   }
-
-  console.log("useScheduleData", {
-    month,
-    timezone,
-    username,
-    eventSlug,
-    eventId,
-    selectedDate,
-    prefetchNextMonth,
-    duration,
-    monthCount,
-    dayCount,
-    rescheduleUid,
-    isTeamEvent,
-    usernameList: getUsernameList(username ?? ""),
-  });
 
   return trpc.viewer.public.slots.getSchedule.useQuery(
     {

@@ -494,7 +494,7 @@ const DatePicker = ({
   const nextMonthBrowsingDate = browsingDate.add(1, "month");
   const { i18n } = useLocale();
 
-  const { shouldRenderNextMonth, includedDatesInMonth, includedDatesNextMonth } = useCalendarDays({
+  const { shouldRenderNextMonth, includedDatesInMonth } = useCalendarDays({
     browsingDate,
     weekStart,
     minDate: passThroughProps.minDate,
@@ -526,10 +526,9 @@ const DatePicker = ({
     return false;
   }, [periodEndDate, monthFromStore, periodType, periodDays, includedDatesInMonth?.length]);
 
-  console.log({ limitReached, periodEndDate, periodType, periodDays });
-
   const changeMonth = useCallback(
     (newMonth: number) => {
+      setAutoNavigating(false);
       if (onMonthChange) {
         onMonthChange(browsingDate.add(newMonth, "month"));
       }
@@ -537,6 +536,7 @@ const DatePicker = ({
     [browsingDate, onMonthChange]
   );
   const goBack = useCallback(() => {
+    setAutoNavigating(false);
     if (onMonthChange) {
       onMonthChange(dayjs().startOf("month"));
     }
@@ -583,15 +583,13 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
-  console.log({ autoNavigating });
-
   useEffect(() => {
-    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
+    if (passThroughProps.isPending || limitReached) return;
+    if (autoNavigating && includedDatesInMonth?.length === 0) {
       changeMonth(+1);
-    } else {
-      setAutoNavigating(false);
     }
-  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length, autoNavigating]);
+    setAutoNavigating(false);
+  }, [includedDatesInMonth?.length, autoNavigating, limitReached, passThroughProps.isPending, changeMonth]);
 
   return (
     <div className={className}>

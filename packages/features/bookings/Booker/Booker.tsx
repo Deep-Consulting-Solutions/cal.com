@@ -128,8 +128,6 @@ const BookerComponent = ({
 
   const { t } = useLocale();
 
-  console.log({ availableSlots, nextSlots, addonDays, nonEmptyScheduleDays, selectedDate });
-
   useBrandColors({
     brandColor: event.data?.profile.brandColor ?? DEFAULT_LIGHT_BRAND_COLOR,
     darkBrandColor: event.data?.profile.darkBrandColor ?? DEFAULT_DARK_BRAND_COLOR,
@@ -501,7 +499,7 @@ const BookerComponent = ({
                 extraDays={extraDays}
                 limitHeight={layout === BookerLayouts.MONTH_VIEW || layout === "mobile"}
                 schedule={schedule?.data}
-                isLoading={schedule.isPending}
+                isLoading={schedule.isFetching}
                 seatsPerTimeSlot={event.data?.seatsPerTimeSlot}
                 showAvailableSeatsCount={event.data?.seatsShowAvailabilityCount}
                 event={event.data}

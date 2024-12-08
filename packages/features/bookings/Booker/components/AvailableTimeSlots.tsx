@@ -79,8 +79,6 @@ export const AvailableTimeSlots = ({
     : [];
 
   const slotsPerDay = useSlotsForAvailableDates(dates, schedule?.slots);
-  console.log({ slotsPerDay });
-  console.log({ allSlots: schedule?.slots });
 
   return (
     <>
