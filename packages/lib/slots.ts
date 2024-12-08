@@ -203,7 +203,7 @@ function buildSlotsWithDateRanges({
     //   slotStartTimeMinute: slotstartTimeBeforeModification.minute(),
     //   slotStartTimeMinuteModulo: slotstartTimeBeforeModification.minute() % interval !== 0
     // })
-    
+
     while (!slotStartTime.add(eventLength, "minutes").subtract(1, "second").utc().isAfter(rangeEnd)) {
       slots.push({
         time: slotStartTime,
