@@ -353,6 +353,7 @@ const _getUserAvailability = async function getUsersWorkingHoursLifeTheUniverseA
       dateRangesAsPerAvailability: dateRanges,
       dateRangesInWhichUserIsAvailable,
       detailedBusyTimes,
+      formattedBusyTimes
     })
   );
 

@@ -196,13 +196,14 @@ function buildSlotsWithDateRanges({
 
     slotStartTime = slotStartTime.add(offsetStart ?? 0, "minutes").tz(timeZone);
 
-    console.log({
-      range,
-      slotstartTimeBeforeModification,
-      slotStartTimeAfterModification: slotStartTime,
-      slotStartTimeMinute: slotstartTimeBeforeModification.minute(),
-      slotStartTimeMinuteModulo: slotstartTimeBeforeModification.minute() % interval !== 0
-    })
+    // console.log({
+    //   range,
+    //   slotstartTimeBeforeModification,
+    //   slotStartTimeAfterModification: slotStartTime,
+    //   slotStartTimeMinute: slotstartTimeBeforeModification.minute(),
+    //   slotStartTimeMinuteModulo: slotstartTimeBeforeModification.minute() % interval !== 0
+    // })
+    
     while (!slotStartTime.add(eventLength, "minutes").subtract(1, "second").utc().isAfter(rangeEnd)) {
       slots.push({
         time: slotStartTime,
