@@ -254,11 +254,24 @@ export default class ZohoCalendarService implements Calendar {
       uemail: userEmail,
     });
 
-    const response = await this.fetcher(`/calendars/freebusy?${query}`, {
-      method: "GET",
-    });
+    let retryCount = 0;
+    // Modify this so it retries at least 3 times before failing
 
-    const data = await this.handleData(response, this.log);
+    let data: any;
+    while(retryCount <= 3){
+      try {
+        const response = await this.fetcher(`/calendars/freebusy?${query}`, {
+          method: "GET",
+        });
+        data = await this.handleData(response, this.log);
+        break
+     } catch (error) {
+      retryCount++
+      if(retryCount > 3) {
+        throw error;
+      }
+     }
+    }
 
     if (data.fb_not_enabled || data.NODATA) return [];
 
