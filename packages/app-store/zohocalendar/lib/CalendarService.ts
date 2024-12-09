@@ -254,33 +254,23 @@ export default class ZohoCalendarService implements Calendar {
       uemail: userEmail,
     });
 
+    const response = await this.fetcher(`/calendars/freebusy?${query}`, {
+      method: "GET",
+    });
 
-    for(let count = 0; count <= 3; count++){
-      try {
-        const response = await this.fetcher(`/calendars/freebusy?${query}`, {
-          method: "GET",
-        });
-    
-        const data = await this.handleData(response, this.log);
-    
-        if (data.fb_not_enabled || data.NODATA) return [];
-    
-        return (
-          data.freebusy
-            .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
-            .map((freebusy: FreeBusy) => ({
-              // using dayjs utc plugin because by default, dayjs parses and displays in local time, which causes a mismatch
-              start: moment.utc(freebusy.startTime, "YYYYMMDDTHHmmssZ").toISOString(),
-              end: moment.utc(freebusy.endTime, "YYYYMMDDTHHmmssZ").toISOString(),
-            })) || []
-        )
-      } catch (error) {
-        if(count === 3){
-          throw error;
-        }
-      }
-    }
+    const data = await this.handleData(response, this.log);
 
+    if (data.fb_not_enabled || data.NODATA) return [];
+
+    return (
+      data.freebusy
+        .filter((freebusy: FreeBusy) => freebusy.fbtype === "busy")
+        .map((freebusy: FreeBusy) => ({
+          // using dayjs utc plugin because by default, dayjs parses and displays in local time, which causes a mismatch
+          start: moment.utc(freebusy.startTime, "YYYYMMDDTHHmmssZ").toISOString(),
+          end: moment.utc(freebusy.endTime, "YYYYMMDDTHHmmssZ").toISOString(),
+        })) || []
+    )
     
   }
 
