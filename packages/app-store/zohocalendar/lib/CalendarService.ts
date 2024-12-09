@@ -108,24 +108,24 @@ export default class ZohoCalendarService implements Calendar {
     const credentials = await this.auth.getToken();
 
     // Swap this to use zoho utils as 
-    // const response = await fetch(`https://accounts.zoho.com/oauth/user/info`, {
-    //   method: "GET",
-    //   headers: {
-    //     Authorization: `Bearer ${credentials.access_token}`,
-    //     "Content-Type": "application/json",
-    //   },
-    // });
-
-    const response = await zohoClient().calendar().passRequestAsProxy({
-      method: "GET" as any,
-      url: `https://accounts.zoho.com/oauth/user/info`,
+    const response = await fetch(`https://accounts.zoho.com/oauth/user/info`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${credentials.access_token}`,
         "Content-Type": "application/json",
-      } as any,
-      data: {},
-      params: {},
-    })
+      },
+    });
+
+    // const response = await zohoClient().calendar().passRequestAsProxy({
+    //   method: "GET" as any,
+    //   url: `https://accounts.zoho.com/oauth/user/info`,
+    //   headers: {
+    //     Authorization: `Bearer ${credentials.access_token}`,
+    //     "Content-Type": "application/json",
+    //   } as any,
+    //   data: {},
+    //   params: {},
+    // })
 
     return this.handleData(response, this.log);
   };
@@ -431,7 +431,7 @@ export default class ZohoCalendarService implements Calendar {
       throw response;
     }
     log.debug("zoho request with data", response);
-    return response;
+    return response.data ? response.data : response;
   }
 
   private translateEvent = (event: CalendarEvent) => {
