@@ -101,9 +101,9 @@ async function postHandler(req: NextApiRequest) {
 
   if (incompleteSetups.length) {
     // send notification to admin
-    if (process.env.ADMIN_EMAIL) {
+    if (process.env.ADMIN_EMAIL && process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS) {
       await sendMail({
-        from: "buffer-sender@buffer-staging.esa-emails.technology", // TODO: get from env
+        from: process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS,
         to: process.env.ADMIN_EMAIL,
         subject: "Reminder: Users with incomplete Cal setup",
         html: incompleteSetupReminderEmail(incompleteSetups),

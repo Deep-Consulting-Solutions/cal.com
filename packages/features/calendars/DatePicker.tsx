@@ -378,16 +378,20 @@ const Days = ({
         // Check if this week contains the transition from current month to next month
         const isTransitionRow = transitionIndex !== -1;
         const isUnavailableWeek = week.every(({ disabled }) => disabled);
+        const isNextWeekUnavailable =
+          weekIndex < weeks.length - 1 && weeks[weekIndex + 1].every(({ disabled }) => disabled);
 
         // Render "No Availability" if this week is unavailable and the previous week was available
         if (shouldRenderNextMonth && isUnavailableWeek && !isTransitionRow) {
           if (!wasPreviousWeekUnavailable) {
             wasPreviousWeekUnavailable = true;
-            return (
-              <div key={`week-${weekIndex}`} className="text-muted col-span-7 p-4 text-center text-sm">
-                No availability
-              </div>
-            );
+            if (isNextWeekUnavailable) {
+              return (
+                <div key={`week-${weekIndex}`} className="text-muted col-span-7 p-4 text-center text-sm">
+                  No availability
+                </div>
+              );
+            }
           } else {
             // Skip rendering consecutive "No Availability" divs
             wasPreviousWeekUnavailable = true;
@@ -433,7 +437,7 @@ const Days = ({
                         <>
                           <div className="absolute left-[-8px] right-[-3px] top-[-0.5rem] h-[2px] bg-gray-300" />
                           {idx !== 0 && (
-                            <div className="absolute left-[-8px] top-[-8px] h-[133%] w-[2px] bg-gray-300" />
+                            <div className="absolute bottom-[-6px] left-[-8px] top-[-6px] w-[2px] bg-gray-300" />
                           )}
                           {idx === 0 && (
                             <div className="text-white-700 absolute left-[-3px] top-[-0.25rem] text-xs">
@@ -485,12 +489,12 @@ const DatePicker = ({
   showOneMonth,
   ...passThroughProps
 }: DatePickerProps & Partial<React.ComponentProps<typeof Days>>) => {
-  const [autoNavigating, setAutoNavigating] = useState(true); // Track automatic navigation
+  const [autoNavigating, setAutoNavigating] = useState(true);
   const browsingDate = passThroughProps.browsingDate || dayjs().startOf("month");
   const nextMonthBrowsingDate = browsingDate.add(1, "month");
   const { i18n } = useLocale();
 
-  const { shouldRenderNextMonth, includedDatesInMonth, includedDatesNextMonth } = useCalendarDays({
+  const { shouldRenderNextMonth, includedDatesInMonth } = useCalendarDays({
     browsingDate,
     weekStart,
     minDate: passThroughProps.minDate,
@@ -499,15 +503,32 @@ const DatePicker = ({
     showOneMonth,
   });
 
-  const monthFromStore = useBookerStore((state) => state.month, shallow);
-  const presentMonth = dayjs().startOf("month");
-  const parsedMonth = dayjs(monthFromStore, "YYYY-MM");
-  const monthDifference = parsedMonth.diff(presentMonth, "month");
-  const limitReached = monthDifference > 12;
+  const [monthFromStore, periodEndDate, periodType, periodDays] = useBookerStore(
+    (state) => [state.month, state.periodEndDate, state.periodType, state.periodDays],
+    shallow
+  );
+  const limitReached = useMemo(() => {
+    const periodEndDateDayjs = dayjs(periodEndDate);
+    const parsedMonth = dayjs(monthFromStore, "YYYY-MM");
+
+    if (periodType === "UNLIMITED") {
+      return false;
+    }
+    if (periodType === "RANGE") {
+      return periodEndDateDayjs.isBefore(parsedMonth, "month");
+    }
+    if (periodType === "ROLLING" && periodDays) {
+      const newDate = dayjs().add(periodDays, "day");
+      const isBefore = newDate.isBefore(parsedMonth, "month");
+      return isBefore && includedDatesInMonth?.length === 0;
+    }
+
+    return false;
+  }, [periodEndDate, monthFromStore, periodType, periodDays, includedDatesInMonth?.length]);
 
   const changeMonth = useCallback(
     (newMonth: number) => {
-      setAutoNavigating(false); // Disable auto-navigation on manual action
+      setAutoNavigating(false);
       if (onMonthChange) {
         onMonthChange(browsingDate.add(newMonth, "month"));
       }
@@ -515,7 +536,7 @@ const DatePicker = ({
     [browsingDate, onMonthChange]
   );
   const goBack = useCallback(() => {
-    setAutoNavigating(false); // Disable auto-navigation on manual action
+    setAutoNavigating(false);
     if (onMonthChange) {
       onMonthChange(dayjs().startOf("month"));
     }
@@ -562,19 +583,18 @@ const DatePicker = ({
     );
   }, [browsingDate, hasSameYear, month, nextMonth, nextMonthBrowsingDate, shouldRenderNextMonth]);
 
-  // Effect to auto-navigate when no dates are available in the current month
   useEffect(() => {
-    if (autoNavigating && includedDatesInMonth?.length === 0 && includedDatesNextMonth?.length > 0) {
+    if (passThroughProps.isPending || limitReached) return;
+    if (autoNavigating && includedDatesInMonth?.length === 0) {
       changeMonth(+1);
-    } else {
-      setAutoNavigating(false); // Reset the flag after the navigation is complete
     }
-  }, [changeMonth, includedDatesInMonth?.length, includedDatesNextMonth?.length, autoNavigating]);
+    setAutoNavigating(false);
+  }, [includedDatesInMonth?.length, autoNavigating, limitReached, passThroughProps.isPending, changeMonth]);
 
   return (
     <div className={className}>
       <div className="mb-1 flex items-center justify-center text-xl">
-        <div className="text-emphasis w-full">
+        <div className="text-emphasis flex w-full justify-center">
           <div className="flex w-full items-center justify-between">
             <Button
               className={classNames(
@@ -589,7 +609,7 @@ const DatePicker = ({
               variant="icon"
               StartIcon={ChevronLeft}
             />
-            <div className="text-default mx-4 text-base">
+            <div className="text-default text-base">
               {browsingDate ? monthText : <SkeletonText className="h-8 w-24" />}
             </div>
             <Button

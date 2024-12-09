@@ -58,7 +58,6 @@ export const TimezoneWithLabel = ({
                   event.lockTimeZoneToggleOnBookingPage ? "cursor-not-allowed" : ""
                 }`}>
                 <TimezoneSelect
-                  menuPosition="fixed"
                   classNames={{
                     control: () => "!min-h-0 p-0 w-full border-0 bg-transparent focus-within:ring-0",
                     menu: () => "!w-64 max-w-[90vw]",

@@ -51,9 +51,9 @@ async function postHandler(req: NextApiRequest) {
     }
 
     // send notification to user
-    if (credential.user?.email) {
+    if (credential.user?.email && process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS) {
       await sendMail({
-        from: "buffer-sender@buffer-staging.esa-emails.technology", // TODO: get from env
+        from: process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS,
         to: credential.user?.email,
         subject: "Reminder: Complete your zoho calender setup for Cal bookings",
         html: setupFreeBusyZohoCalendarReminderEmail({ calendarName: externalCalendar.name }),

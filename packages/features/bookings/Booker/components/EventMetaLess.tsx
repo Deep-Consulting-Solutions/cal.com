@@ -40,7 +40,7 @@ export const EventMetaLess = ({
         </m.div>
       )}
       {!isPending && !!event && (
-        <m.div {...fadeInUp} layout transition={{ ...fadeInUp.transition, delay: 0.3 }}>
+        <m.div {...fadeInUp} layout transition={{ ...fadeInUp.transition, delay: 0.3, duration: 0.01 }}>
           {!!onGoBack && (
             <button
               className="border-subtle absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border"
