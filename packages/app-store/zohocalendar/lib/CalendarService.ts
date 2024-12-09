@@ -258,7 +258,13 @@ export default class ZohoCalendarService implements Calendar {
       method: "GET",
     });
 
-    const data = await this.handleData(response, this.log);
+    let data: any
+    try {
+      data = await this.handleData(response, this.log);
+    } catch (error) {
+      console.log({thegetBusyDataErrorrrrr: error})
+      throw error;
+    }
 
     if (data.fb_not_enabled || data.NODATA) return [];
 
