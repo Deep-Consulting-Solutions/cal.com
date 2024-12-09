@@ -163,9 +163,11 @@ const BookerComponent = ({
           attendees: undefined,
         });
       }
+      setBookerState("selecting_time_alt");
     }
     if (bookerState === "selecting_time" || bookerState === "selecting_time_alt") {
       setSelectedDate(null);
+      setSelectedTimeslot(null);
       setBookerState("selecting_date");
     }
   }, [
@@ -404,9 +406,9 @@ const BookerComponent = ({
                   <EventMetaMore event={event.data} isPending={event.isPending} onGoBack={onGoBack} />
                 )}
                 {layout !== BookerLayouts.MONTH_VIEW && bookerState !== "booking" && (
-                  <div className="mt-auto px-5 py-3 ">
+                  <m.div layout {...fadeInUp} className="mt-auto px-3 py-3 sm:px-5 ">
                     <DatePicker event={event} schedule={schedule} />
-                  </div>
+                  </m.div>
                 )}
               </BookerSection>
             </StickyOnDesktop>
@@ -423,11 +425,11 @@ const BookerComponent = ({
                     <EventMetaMore event={event.data} isPending={event.isPending} onGoBack={onGoBack} />
                   )}
                   {bookerState === "selecting_date" && (
-                    <div className="mt-auto px-5 py-3 ">
+                    <m.div layout {...fadeInUp} className="mt-auto px-5 py-3 ">
                       <p className="my-2 text-center font-semibold">Select a Day</p>
                       <DatePicker event={event} schedule={schedule} />
                       <TimezoneWithLabel event={event.data} isPending={event.isPending} className="py-6" />
-                    </div>
+                    </m.div>
                   )}
                 </BookerSection>
               </StickyOnDesktop>
@@ -455,12 +457,12 @@ const BookerComponent = ({
                 layout
                 transition={{ ...fadeInUp.transition, delay: 0.6, duration: 0.5 }}>
                 <p className="my-2 text-center font-semibold">Select a Date</p>
-                <div className="flex h-[95%] flex-col justify-between">
+                <m.div layout {...fadeInUp} className="flex h-[95%] flex-col">
                   <DatePicker event={event} schedule={schedule} />
                   {layout == BookerLayouts.MONTH_VIEW && bookerState !== "selecting_time_alt" && (
                     <TimezoneWithLabel event={event.data} isPending={event.isPending} className="py-6" />
                   )}
-                </div>
+                </m.div>
               </m.div>
             </BookerSection>
 
@@ -495,9 +497,9 @@ const BookerComponent = ({
               {...fadeInLeft}>
               <AvailableTimeSlots
                 extraDays={extraDays}
-                limitHeight={layout === BookerLayouts.MONTH_VIEW}
+                limitHeight={layout === BookerLayouts.MONTH_VIEW || layout === "mobile"}
                 schedule={schedule?.data}
-                isLoading={schedule.isPending}
+                isLoading={schedule.isFetching}
                 seatsPerTimeSlot={event.data?.seatsPerTimeSlot}
                 showAvailableSeatsCount={event.data?.seatsShowAvailabilityCount}
                 event={event.data}

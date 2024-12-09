@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 import dayjs from "@calcom/dayjs";
 import { BOOKER_NUMBER_OF_DAYS_TO_LOAD } from "@calcom/lib/constants";
+import type { PeriodType } from "@calcom/prisma/enums";
 import { BookerLayouts } from "@calcom/prisma/zod-utils";
 
 import type { GetBookingType } from "../lib/get-booking";
@@ -18,6 +19,9 @@ type StoreInitializeType = {
   eventSlug: string;
   // Month can be undefined if it's not passed in as a prop.
   eventId: number | undefined;
+  periodEndDate?: string | null;
+  periodType?: PeriodType | null;
+  periodDays?: number | null;
   layout: BookerLayout;
   month?: string;
   bookingUid?: string | null;
@@ -46,6 +50,9 @@ export type BookerStore = {
   username: string | null;
   eventSlug: string | null;
   eventId: number | null;
+  periodEndDate: string | null;
+  periodType: PeriodType | null;
+  periodDays: number | null;
   /**
    * Verified booker email.
    * Needed in case user turns on Requires Booker Email Verification for an event
@@ -171,13 +178,14 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
       return;
     }
 
+    const layout = get().layout;
     const currentSelection = dayjs(get().selectedDate);
     const newSelection = dayjs(selectedDate);
     set({ selectedDate });
     updateQueryParam("date", selectedDate ?? "");
 
     // Setting month make sure small calendar in fullscreen layouts also updates.
-    if (newSelection.month() !== currentSelection.month()) {
+    if (["week_view", "column_view"].includes(layout) && newSelection.month() !== currentSelection.month()) {
       set({ month: newSelection.format("YYYY-MM") });
       updateQueryParam("month", newSelection.format("YYYY-MM"));
     }
@@ -202,12 +210,18 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
   username: null,
   eventSlug: null,
   eventId: null,
+  periodEndDate: null,
+  periodType: null,
+  periodDays: null,
+  eventType: null,
   verifiedEmail: null,
   setVerifiedEmail: (email: string | null) => {
     set({ verifiedEmail: email });
   },
   month: getQueryParam("month") || getQueryParam("date") || dayjs().format("YYYY-MM"),
   setMonth: (month: string | null) => {
+    const currentMonth = get().month;
+    if (currentMonth === month) return;
     set({ month, selectedTimeslot: null });
     updateQueryParam("month", month ?? "");
     get().setSelectedDate(null);
@@ -232,6 +246,9 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
     eventSlug,
     month,
     eventId,
+    periodEndDate,
+    periodType,
+    periodDays,
     rescheduleUid = null,
     bookingUid = null,
     bookingData = null,
@@ -258,6 +275,9 @@ export const useBookerStore = create<BookerStore>((set, get) => ({
       username,
       eventSlug,
       eventId,
+      periodEndDate,
+      periodType,
+      periodDays,
       org,
       rescheduleUid,
       bookingUid,
@@ -334,6 +354,9 @@ export const useInitializeBookerStore = ({
   eventSlug,
   month,
   eventId,
+  periodEndDate,
+  periodType,
+  periodDays,
   rescheduleUid = null,
   bookingData = null,
   verifiedEmail = null,
@@ -350,6 +373,9 @@ export const useInitializeBookerStore = ({
       eventSlug,
       month,
       eventId,
+      periodEndDate,
+      periodType,
+      periodDays,
       rescheduleUid,
       bookingData,
       layout,
@@ -366,6 +392,9 @@ export const useInitializeBookerStore = ({
     eventSlug,
     month,
     eventId,
+    periodEndDate,
+    periodType,
+    periodDays,
     rescheduleUid,
     bookingData,
     layout,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback } from "react";
 import { shallow } from "zustand/shallow";
 
 import type { Dayjs } from "@calcom/dayjs";
@@ -19,7 +19,6 @@ export const DatePicker = ({
   event: useEventReturnType;
   schedule: useScheduleForEventReturnType;
 }) => {
-  const [showOneMonth, setShowOneMonth] = useState(false);
   const { i18n } = useLocale();
   const [month, selectedDate] = useBookerStore((state) => [state.month, state.selectedDate], shallow);
   const layout = useBookerStore((state) => state.layout, shallow);
@@ -29,30 +28,37 @@ export const DatePicker = ({
   );
   const nonEmptyScheduleDays = useNonEmptyScheduleDays(schedule?.data?.slots);
 
+  const handleMonthChange = useCallback(
+    (date: Dayjs) => {
+      const newMonth = date.format("YYYY-MM");
+      if (newMonth === month) return;
+
+      setMonth(newMonth);
+      setDayCount(null);
+
+      if (layout === BookerLayouts.COLUMN_VIEW || layout === BookerLayouts.WEEK_VIEW) {
+        const newSelectedDate = date.format("YYYY-MM-DD");
+        if (newSelectedDate !== selectedDate) {
+          setSelectedDate(newSelectedDate);
+        }
+      }
+    },
+    [month, layout, setDayCount, setMonth, selectedDate, setSelectedDate]
+  );
+
   return (
     <DatePickerComponent
       isPending={schedule.isPending}
-      onChange={(date: Dayjs | null, showOneMonth?: boolean) => {
-        if (showOneMonth) {
-          setShowOneMonth(true);
-        }
+      onChange={(date: Dayjs | null) => {
         setSelectedDate(date === null ? date : date.format("YYYY-MM-DD"));
       }}
-      onMonthChange={(date: Dayjs) => {
-        setShowOneMonth(false);
-        setMonth(date.format("YYYY-MM"));
-        setDayCount(null); // Whenever the month is changed, we nullify getting X days
-        if (layout === BookerLayouts.COLUMN_VIEW || layout === BookerLayouts.WEEK_VIEW) {
-          // If we're on column view or week view, we need to set the date
-          setSelectedDate(date.format("YYYY-MM-DD"));
-        }
-      }}
+      onMonthChange={handleMonthChange}
       includedDates={nonEmptyScheduleDays}
       locale={i18n.language}
       browsingDate={month ? dayjs(month) : undefined}
       selected={dayjs(selectedDate)}
       weekStart={weekdayToWeekIndex(event?.data?.users?.[0]?.weekStart)}
-      showOneMonth={showOneMonth}
+      showOneMonth={false}
     />
   );
 };

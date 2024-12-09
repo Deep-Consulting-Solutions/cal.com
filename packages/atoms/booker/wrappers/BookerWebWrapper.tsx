@@ -42,6 +42,9 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
   useInitializeBookerStore({
     ...props,
     eventId: event?.data?.id,
+    periodEndDate: event?.data?.periodEndDate?.toISOString(),
+    periodType: event?.data?.periodType,
+    periodDays: event?.data?.periodDays,
     rescheduleUid,
     bookingUid: bookingUid,
     layout: bookerLayout.defaultLayout,

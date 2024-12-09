@@ -77,6 +77,11 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   const password = "some-default-password";
   const hashedPassword = await hashPassword(password);
 
+  // first get the user
+  const existingUser = await prisma.user.findFirst({
+    where: { email },
+  });
+
   const user = await prisma.user.upsert({
     where: { email },
     update: {
@@ -120,14 +125,16 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
     },
   });
 
-  await createSchedule(
-    {
-      name: "Working Hours",
-      schedule: body.schedule,
-    },
-    user,
-    prisma
-  );
+  if (!existingUser) {
+    await createSchedule(
+      {
+        name: "Working Hours",
+        schedule: body.schedule,
+      },
+      user,
+      prisma
+    );
+  }
 
   // setup zoom
   const appData = { appId: "zoom", type: "zoom_video" };
@@ -169,46 +176,65 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  // send zoho calendar oauth link
-  const OAUTH_BASE_URL = "https://accounts.zoho.com/oauth/v2";
-
-  const appKeys = await getAppKeysFromSlug("zohocalendar");
-
-  const { client_id } = zohoKeysSchema.parse(appKeys);
-
-  const state = JSON.stringify({
-    managedSetupReturnTo: `${WEBAPP_URL}/esa/complete-setup`,
-    onErrorReturnTo: `${WEBAPP_URL}/esa/complete-setup`,
-    fromManagedSetup: true,
-    managedSetupId: managedSetup.id,
-    userId: user.id,
+  // check if this user already has zoho connection
+  const existingZohoCalendarCredential = await prisma.credential.findFirst({
+    where: {
+      userId: user.id,
+      appId: "zohocalendar",
+      type: "zoho_calendar",
+    },
   });
+  if (!existingZohoCalendarCredential) {
+    // send zoho calendar oauth link
+    const OAUTH_BASE_URL = "https://accounts.zoho.com/oauth/v2";
 
-  const params = {
-    client_id,
-    response_type: "code",
-    redirect_uri: `${WEBAPP_URL}/api/integrations/zohocalendar/callback`,
-    scope: [
-      "ZohoCalendar.calendar.ALL",
-      "ZohoCalendar.event.ALL",
-      "ZohoCalendar.freebusy.READ",
-      "AaaServer.profile.READ",
-    ],
-    access_type: "offline",
-    state,
-    prompt: "consent",
-  };
+    const appKeys = await getAppKeysFromSlug("zohocalendar");
 
-  const query = stringify(params);
+    const { client_id } = zohoKeysSchema.parse(appKeys);
 
-  const url = `${OAUTH_BASE_URL}/auth?${query}`;
+    const state = JSON.stringify({
+      managedSetupReturnTo: `${WEBAPP_URL}/esa/complete-setup`,
+      onErrorReturnTo: `${WEBAPP_URL}/esa/complete-setup`,
+      fromManagedSetup: true,
+      managedSetupId: managedSetup.id,
+      userId: user.id,
+    });
 
-  await sendMail({
-    from: "buffer-sender@buffer-staging.esa-emails.technology", // TODO: get from env
-    to: email,
-    subject: "URGENT - Complete Your Scheduling Setup",
-    html: setupZohoCalenderOauthEmail({ url }),
-  });
+    const params = {
+      client_id,
+      response_type: "code",
+      redirect_uri: `${WEBAPP_URL}/api/integrations/zohocalendar/callback`,
+      scope: [
+        "ZohoCalendar.calendar.ALL",
+        "ZohoCalendar.event.ALL",
+        "ZohoCalendar.freebusy.READ",
+        "AaaServer.profile.READ",
+      ],
+      access_type: "offline",
+      state,
+      prompt: "consent",
+    };
+
+    const query = stringify(params);
+
+    const url = `${OAUTH_BASE_URL}/auth?${query}`;
+
+    if (process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS) {
+      await sendMail({
+        from: process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS,
+        to: email,
+        subject: "URGENT - Complete Your Scheduling Setup",
+        html: setupZohoCalenderOauthEmail({ url }),
+      });
+    }
+
+    return {
+      message: "Managed setup in progress",
+      data: {
+        url,
+      },
+    };
+  }
 
   await prisma.zohoSchedulingSetup.update({
     where: {
@@ -220,10 +246,8 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   });
 
   return {
-    message: "Managed setup in progress",
-    data: {
-      url,
-    },
+    message: "Managed setup in done",
+    data: {},
   };
 }
 
