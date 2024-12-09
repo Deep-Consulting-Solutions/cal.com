@@ -405,9 +405,9 @@ export default class ZohoCalendarService implements Calendar {
     }
   }
 
-  async handleData(response: Response, log: typeof logger) {
-    const data = await response.json();
-    if (!response.ok) {
+  async handleData(response: any, log: typeof logger) {
+    const { data } = response || {};
+    if (response.status >= 200 && response.status <= 299) {
       log.debug("zoho request with data", data);
       throw data;
     }
