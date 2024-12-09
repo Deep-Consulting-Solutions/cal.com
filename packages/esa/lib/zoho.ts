@@ -17,6 +17,9 @@ export const initZohoClient = (): void => {
       apiUrlV3: `${process.env.ZOHO_CRM_BASE_URL}/v3`,
       apiUrlV5: `${process.env.ZOHO_CRM_BASE_URL}/v5`,
     },
+    calendar: {
+      apiUrl: `${process.env.ZOHO_CALENDAR_BASE_URL || 'https://calendar.zoho.com/api' }/v2`,
+    }
   };
   //
   // const redisPort = Number(process.env.REDIS_PORT) || 6379;
