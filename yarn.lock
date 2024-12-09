@@ -4737,9 +4737,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deep-consulting-solutions/zoho-utils@npm:^1.6.97":
-  version: 1.6.97
-  resolution: "@deep-consulting-solutions/zoho-utils@npm:1.6.97::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40Deep-Consulting-Solutions%2Fzoho-utils%2F1.6.97%2Fba44d827e6459a7aa59f21a13776c6030720eae2"
+"@deep-consulting-solutions/zoho-utils@npm:^1.6.98":
+  version: 1.6.98
+  resolution: "@deep-consulting-solutions/zoho-utils@npm:1.6.98::__archiveUrl=https%3A%2F%2Fnpm.pkg.github.com%2Fdownload%2F%40Deep-Consulting-Solutions%2Fzoho-utils%2F1.6.98%2Fbd712444c4222c56e1a1c7337e1f9e6370cbbda1"
   dependencies:
     aws-sdk: ^2.821.0
     axios: ^0.21.2
@@ -4761,7 +4761,7 @@ __metadata:
     yup: ^0.32.8
   bin:
     zoho-utils: build/src/index.js
-  checksum: 4b860ef48106ce7eca4c9744ac8e93644dc63dbe9387bc751bbb4b07a0c3fe972052505d4ede4ff676028a5b1a052e19869bf3ad8974e8df3357ead78130449b
+  checksum: 8f995a7350f4aafbe6e92a4025c15a932a2ae1ae6a20667fcea984f8986f1418b682e3477c57ee58c7a7e2620758e06b1a3062b64b20583d223a83c670945e40
   languageName: node
   linkType: hard
 
@@ -4963,7 +4963,7 @@ __metadata:
   resolution: "@esa/cal-additions@workspace:packages/esa"
   dependencies:
     "@calcom/prisma": "*"
-    "@deep-consulting-solutions/zoho-utils": ^1.6.97
+    "@deep-consulting-solutions/zoho-utils": ^1.6.98
     ioredis: ^5.2.3
     next-api-middleware: ^1.0.1
   languageName: unknown
@@ -15565,7 +15565,6 @@ __metadata:
   resolution: "calcom-monorepo@workspace:."
   dependencies:
     "@changesets/cli": ^2.26.1
-    "@deep-consulting-solutions/zoho-utils": ^1.6.97
     "@deploysentinel/playwright": ^0.3.3
     "@playwright/test": ^1.31.2
     "@snaplet/copycat": ^4.1.0
