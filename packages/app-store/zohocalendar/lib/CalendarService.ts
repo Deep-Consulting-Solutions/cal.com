@@ -132,7 +132,7 @@ export default class ZohoCalendarService implements Calendar {
         eventdata: JSON.stringify(this.translateEvent(event)),
       });
 
-      const eventResponse = await this.fetcher(`/calendars/${calendarId}/events?${query}`, {
+      const eventResponse = await this.fetcher(`calendars/${calendarId}/events?${query}`, {
         method: "POST",
       });
       eventRespData = await this.handleData(eventResponse, this.log);
@@ -175,7 +175,7 @@ export default class ZohoCalendarService implements Calendar {
     }
     try {
       // needed to fetch etag
-      const existingEventResponse = await this.fetcher(`/calendars/${calendarId}/events/${uid}`);
+      const existingEventResponse = await this.fetcher(`calendars/${calendarId}/events/${uid}`);
       const existingEventData = await this.handleData(existingEventResponse, this.log);
 
       const query = stringify({
@@ -185,7 +185,7 @@ export default class ZohoCalendarService implements Calendar {
         }),
       });
 
-      const eventResponse = await this.fetcher(`/calendars/${calendarId}/events/${uid}?${query}`, {
+      const eventResponse = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
         method: "PUT",
       });
       eventRespData = await this.handleData(eventResponse, this.log);
@@ -225,7 +225,7 @@ export default class ZohoCalendarService implements Calendar {
     }
     try {
       // needed to fetch etag
-      const existingEventResponse = await this.fetcher(`/calendars/${calendarId}/events/${uid}`);
+      const existingEventResponse = await this.fetcher(`calendars/${calendarId}/events/${uid}`);
       const existingEventData = await this.handleData(existingEventResponse, this.log);
 
       const query = stringify({
@@ -237,7 +237,7 @@ export default class ZohoCalendarService implements Calendar {
         }),
       });
 
-      const response = await this.fetcher(`/calendars/${calendarId}/events/${uid}?${query}`, {
+      const response = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
         method: "DELETE",
         headers: {
           etag: existingEventData.events[0].etag,
@@ -258,7 +258,7 @@ export default class ZohoCalendarService implements Calendar {
       uemail: userEmail,
     });
 
-    const response = await this.fetcher(`/calendars/freebusy?${query}`, {
+    const response = await this.fetcher(`calendars/freebusy?${query}`, {
       method: "GET",
     });
 
@@ -350,7 +350,7 @@ export default class ZohoCalendarService implements Calendar {
 
   async listCalendarsRaw(): Promise<ZohoCalendarListResp> {
     try {
-      const resp = await this.fetcher(`/calendars`);
+      const resp = await this.fetcher(`calendars`);
       const data = (await this.handleData(resp, this.log)) as ZohoCalendarListResp;
 
       return data;
@@ -362,7 +362,7 @@ export default class ZohoCalendarService implements Calendar {
 
   async listCalendars(): Promise<IntegrationCalendar[]> {
     try {
-      const resp = await this.fetcher(`/calendars`);
+      const resp = await this.fetcher(`calendars`);
       const data = (await this.handleData(resp, this.log)) as ZohoCalendarListResp;
       const result = data.calendars
         .filter((cal) => {
@@ -387,7 +387,7 @@ export default class ZohoCalendarService implements Calendar {
       }
 
       // No primary calendar found, get primary calendar directly
-      const respPrimary = await this.fetcher(`/calendars?category=own`);
+      const respPrimary = await this.fetcher(`calendars?category=own`);
       const dataPrimary = (await this.handleData(respPrimary, this.log)) as ZohoCalendarListResp;
       return dataPrimary.calendars.map((cal) => {
         const calendar: IntegrationCalendar = {
