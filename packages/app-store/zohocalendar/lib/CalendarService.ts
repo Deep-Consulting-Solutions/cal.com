@@ -266,7 +266,7 @@ export default class ZohoCalendarService implements Calendar {
     try {
       data = await this.handleData(response, this.log);
     } catch (error) {
-      console.log({thegetBusyDataErrorrrrr: error})
+      console.log(JSON.stringify({thegetBusyDataErrorrrrr: error}))
       throw error;
     }
 
