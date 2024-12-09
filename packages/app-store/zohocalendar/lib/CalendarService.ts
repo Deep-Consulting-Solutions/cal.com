@@ -413,14 +413,13 @@ export default class ZohoCalendarService implements Calendar {
   }
 
   async handleData(response: any, log: typeof logger) {
-    const { data } = response || {};
-    console.log(`dataResponse: ${JSON.stringify(response)}`);
-    if (response.status >= 300 || response.status <= 199) {
-      log.debug("zoho request with data", JSON.stringify({data}));
-      throw data;
+    console.log('handleDataInput', JSON.stringify(response));
+    if (response.status >= 300 && response.status <= 199) {
+      log.debug("zoho request with data", response);
+      throw response;
     }
-    log.debug("zoho request with data", JSON.stringify({data}));
-    return data;
+    log.debug("zoho request with data", response);
+    return response;
   }
 
   private translateEvent = (event: CalendarEvent) => {
