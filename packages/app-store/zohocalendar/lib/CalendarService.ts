@@ -266,7 +266,7 @@ export default class ZohoCalendarService implements Calendar {
     try {
       data = await this.handleData(response, this.log);
     } catch (error) {
-      console.log({thegetBusyDataErrorrrrr: error})
+      console.log(JSON.stringify({thegetBusyDataErrorrrrr: error}))
       throw error;
     }
 
@@ -416,10 +416,10 @@ export default class ZohoCalendarService implements Calendar {
     console.dir(response, { depth: null });
     const { data } = response || {};
     if (response.status >= 300 || response.status <= 199) {
-      log.debug("zoho request with data", data);
+      log.debug("zoho request with data", JSON.stringify({data}));
       throw data;
     }
-    log.debug("zoho request with data", data);
+    log.debug("zoho request with data", JSON.stringify({data}));
     return data;
   }
 
