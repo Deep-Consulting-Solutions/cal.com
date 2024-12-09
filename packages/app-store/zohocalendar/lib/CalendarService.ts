@@ -17,6 +17,7 @@ import type { CredentialPayload } from "@calcom/types/Credential";
 
 import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import type { ZohoAuthCredentials, FreeBusy, ZohoCalendarListResp } from "../types/ZohoCalendar";
+import { zohoClient } from '../../../esa/lib/zoho';
 
 const zohoKeysSchema = z.object({
   client_id: z.string(),
@@ -89,15 +90,18 @@ export default class ZohoCalendarService implements Calendar {
   private fetcher = async (endpoint: string, init?: RequestInit | undefined) => {
     const credentials = await this.auth.getToken();
 
-    return fetch(`https://calendar.zoho.com/api/v1${endpoint}`, {
-      method: "GET",
-      ...init,
+    return await zohoClient().calendar().passRequestAsProxy({
+      method: "GET" as any,
+      url: endpoint,
+      ...(init || {}),
       headers: {
         Authorization: `Bearer ${credentials.access_token}`,
         "Content-Type": "application/json",
         ...init?.headers,
-      },
-    });
+      } as any,
+      data: {},
+      params: {},
+    })
   };
 
   private getUserInfo = async () => {
