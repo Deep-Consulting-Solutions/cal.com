@@ -228,6 +228,15 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
+    await prisma.zohoSchedulingSetup.update({
+      where: {
+        id: managedSetup.id,
+      },
+      data: {
+        status: "Pending Completion",
+      },
+    });
+
     return {
       message: "Managed setup in progress",
       data: {
@@ -241,7 +250,7 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
       id: managedSetup.id,
     },
     data: {
-      status: "Pending Completion",
+      status: "Completed",
     },
   });
 
