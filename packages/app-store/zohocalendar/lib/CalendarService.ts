@@ -18,6 +18,7 @@ import type { CredentialPayload } from "@calcom/types/Credential";
 import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import type { ZohoAuthCredentials, FreeBusy, ZohoCalendarListResp } from "../types/ZohoCalendar";
 import { zohoClient } from '../../../esa/lib/zoho';
+import { redis } from "../../../esa/lib/redis";
 
 const zohoKeysSchema = z.object({
   client_id: z.string(),
@@ -104,9 +105,8 @@ export default class ZohoCalendarService implements Calendar {
     })
   };
 
-  private getUserInfo = async () => {
+  private getUserInfo = async (calendarID: string) => {
     const credentials = await this.auth.getToken();
-
     // Swap this to use zoho utils as 
     // const response = await fetch(`https://accounts.zoho.com/oauth/user/info`, {
     //   method: "GET",
@@ -116,17 +116,26 @@ export default class ZohoCalendarService implements Calendar {
     //   },
     // });
 
-    const response = await zohoClient().calendar().passRequestAsProxy({
-      method: "GET" as any,
-      url: `https://accounts.zoho.com/oauth/user/info`,
-      headers: {
-        Authorization: `Bearer ${credentials.access_token}`,
-        "Content-Type": "application/json",
-        ignoreBaseUrl: true,
-      } as any,
-      data: {},
-      params: {},
-    })
+    let response: any;
+    const cachedResponse = await redis.get(calendarID);
+    if(cachedResponse){
+      response = JSON.parse(cachedResponse);
+    }
+
+    if(!response){
+      response = await zohoClient().calendar().passRequestAsProxy({
+        method: "GET" as any,
+        url: `https://accounts.zoho.com/oauth/user/info`,
+        headers: {
+          Authorization: `Bearer ${credentials.access_token}`,
+          "Content-Type": "application/json",
+          ignoreBaseUrl: true,
+        } as any,
+        data: {},
+        params: {},
+      })
+      await redis.setex(calendarID, 60*10, JSON.stringify(response));
+    }
 
     return this.handleData(response, this.log);
   };
@@ -271,9 +280,21 @@ export default class ZohoCalendarService implements Calendar {
       uemail: userEmail,
     });
 
-    const response = await this.fetcher(`calendars/freebusy?${query}`, {
+    const busyDataKey = `${dateFrom}${dateTo}${userEmail}`;
+    let response: any;
+    const cachedResponse = await redis.get(busyDataKey);
+    if(cachedResponse){
+      response = JSON.parse(cachedResponse);
+    }
+
+    if(!response){
+
+     response = await this.fetcher(`calendars/freebusy?${query}`, {
       method: "GET",
     });
+
+    await redis.setex(busyDataKey, 15, JSON.stringify(response));
+  }
 
     let data: any
     try {
@@ -324,7 +345,7 @@ export default class ZohoCalendarService implements Calendar {
 
       if (!selectedCalendars[0]) return [];
 
-      const userInfo = await this.getUserInfo();
+      const userInfo = await this.getUserInfo(selectedCalendars[0]);
       const originalStartDate = dayjs(dateFrom);
       const originalEndDate = dayjs(dateTo);
       const diff = originalEndDate.diff(originalStartDate, "days");
