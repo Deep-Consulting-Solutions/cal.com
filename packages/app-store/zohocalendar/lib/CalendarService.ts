@@ -345,7 +345,7 @@ export default class ZohoCalendarService implements Calendar {
 
       if (!selectedCalendars[0]) return [];
 
-      const userInfo = await this.getUserInfo(selectedCalendars[0]);
+      const userInfo = await this.getUserInfo(selectedCalendarIds[0]);
       const originalStartDate = dayjs(dateFrom);
       const originalEndDate = dayjs(dateTo);
       const diff = originalEndDate.diff(originalStartDate, "days");
