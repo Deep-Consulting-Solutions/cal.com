@@ -106,7 +106,6 @@ export default class ZohoCalendarService implements Calendar {
   };
 
   private getUserInfo = async (calendarID: string) => {
-    const credentials = await this.auth.getToken();
     // Swap this to use zoho utils as 
     // const response = await fetch(`https://accounts.zoho.com/oauth/user/info`, {
     //   method: "GET",
@@ -123,6 +122,7 @@ export default class ZohoCalendarService implements Calendar {
     }
 
     if(!response){
+      const credentials = await this.auth.getToken();
       response = await zohoClient().calendar().passRequestAsProxy({
         method: "GET" as any,
         url: `https://accounts.zoho.com/oauth/user/info`,
