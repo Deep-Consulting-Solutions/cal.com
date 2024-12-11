@@ -51,7 +51,6 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
     org: props.entity.orgSlug,
   });
 
-  const [bookerState, _] = useBookerStore((state) => [state.state, state.setState], shallow);
   const [dayCount] = useBookerStore((state) => [state.dayCount, state.setDayCount], shallow);
   const { data: session } = useSession();
   const routerQuery = useRouterQuery();
@@ -100,13 +99,17 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
   });
   const slots = useSlots(event);
 
-  const monthCount =
-    ((bookerLayout.layout !== BookerLayouts.WEEK_VIEW && bookerState === "selecting_time") ||
-      bookerLayout.layout === BookerLayouts.COLUMN_VIEW) &&
-    dayjs(date).add(1, "month").month() !==
-      dayjs(date).add(bookerLayout.columnViewExtraDays.current, "day").month()
-      ? 2
-      : undefined;
+  const monthCount = useMemo(() => {
+    if (
+      bookerLayout.layout === BookerLayouts.COLUMN_VIEW &&
+      dayjs(date).add(1, "month").month() !==
+        dayjs(date).add(bookerLayout.columnViewExtraDays.current, "day").month()
+    ) {
+      return 2;
+    }
+
+    return undefined;
+  }, [bookerLayout.columnViewExtraDays, bookerLayout.layout, date]);
   /**
    * Prioritize dateSchedule load
    * Component will render but use data already fetched from here, and no duplicate requests will be made

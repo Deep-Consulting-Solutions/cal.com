@@ -422,8 +422,7 @@ const Days = ({
                     <DayComponent
                       date={day}
                       onClick={() => {
-                        const dayIsInNextMonth = day?.month() === browsingDate.add(1, "month").month();
-                        props.onChange(day, dayIsInNextMonth);
+                        props.onChange(day);
                       }}
                       disabled={disabled}
                       active={isActive(day)}
