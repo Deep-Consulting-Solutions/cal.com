@@ -724,15 +724,16 @@ async function getTeamIdFromSlug(
 
 const refreshAvailableSlotsCache = async () => {
   try {
-    const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+    // const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+
+    const allKeys = Object.keys(responseStore);
 
     const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
     for (const batchedKeys of batchedKeysArr) {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
-          const dataToRefreshJSON = await redis.get(getAvailableSlotsCacheKey);
-          if(dataToRefreshJSON){
-            const dataToRefresh = (parse(dataToRefreshJSON)) as GetScheduleOptions & {response: any}
+          const dataToRefresh = responseStore[getAvailableSlotsCacheKey];
+          if(dataToRefresh){
             // check if end time has passed and remove the item from cache else, refresh it
             // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
             if(new Date() < new Date(dataToRefresh.input.endTime)){
