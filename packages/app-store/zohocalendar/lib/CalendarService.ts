@@ -19,6 +19,7 @@ import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import type { ZohoAuthCredentials, FreeBusy, ZohoCalendarListResp } from "../types/ZohoCalendar";
 import { zohoClient } from '../../../esa/lib/zoho';
 import { redis } from "../../../esa/lib/redis";
+import { freeBusyStore, userInfoStore } from "../../../esa/store/store";
 
 const zohoKeysSchema = z.object({
   client_id: z.string(),
@@ -115,11 +116,7 @@ export default class ZohoCalendarService implements Calendar {
     //   },
     // });
 
-    let response: any;
-    const cachedResponse = await redis.get(calendarID);
-    if(cachedResponse){
-      response = JSON.parse(cachedResponse);
-    }
+    let response: any = userInfoStore[calendarID];
 
     if(!response){
       const credentials = await this.auth.getToken();
@@ -134,7 +131,8 @@ export default class ZohoCalendarService implements Calendar {
         data: {},
         params: {},
       })
-      await redis.setex(calendarID, 60*10, JSON.stringify(response));
+      
+      userInfoStore[calendarID] = response;
     }
 
     return this.handleData(response, this.log);
@@ -281,19 +279,20 @@ export default class ZohoCalendarService implements Calendar {
     });
 
     const busyDataKey = `${dateFrom}${dateTo}${userEmail}`;
-    let response: any;
-    const cachedResponse = await redis.get(busyDataKey);
-    if(cachedResponse){
-      response = JSON.parse(cachedResponse);
-    }
-
+    let response: any = freeBusyStore[busyDataKey];
     if(!response){
+      // const cachedResponse = await redis.get(busyDataKey);
+      // if(cachedResponse){
+      //   response = JSON.parse(cachedResponse);
+      // }
 
-     response = await this.fetcher(`calendars/freebusy?${query}`, {
-      method: "GET",
-    });
-
-    await redis.setex(busyDataKey, 15, JSON.stringify(response));
+      // if(!response){
+      response = await this.fetcher(`calendars/freebusy?${query}`, {
+        method: "GET",
+      });
+      freeBusyStore[busyDataKey] = response;
+      // await redis.setex(busyDataKey, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 15), JSON.stringify(response));
+    // }
   }
 
     let data: any
