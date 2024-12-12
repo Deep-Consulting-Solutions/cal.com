@@ -31,6 +31,7 @@ import { TRPCError } from "@trpc/server";
 import type { GetScheduleOptions } from "./getSchedule.handler";
 import type { TGetScheduleInputSchema } from "./getSchedule.schema";
 import { redis } from "../../../../../esa/lib/redis";
+import { responseStore } from "../../../../../esa/store/store";
 
 
 export const checkIfIsAvailable = ({
@@ -305,9 +306,10 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
   const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${input.eventTypeId}_${input.eventTypeSlug}`;
   
   if((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse)){
-    const response = await redis.get(cacheKey);
-    if(response){
-      const responseDetails: any = parse(response);
+    // const response = await redis.get(cacheKey);
+    const responseDetails = responseStore[cacheKey];
+    if(responseDetails){
+      // const responseDetails: any = parse(response);
       return (responseDetails.response) as {
         slots: Record<string, {
             time: string;
@@ -674,9 +676,15 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
 
   if((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true')){
     // store the response for a particular computation, it will then keep refreshing itself until it end date passes
-    await redis.set(cacheKey, stringify({input, ctx, response: {
+    const responseDataToCache = {
+      input, 
+      ctx, 
+      response: {
       slots: computedAvailableSlots,
-    }}))
+      }
+    }
+    responseStore[cacheKey] = responseDataToCache 
+    await redis.set(cacheKey, stringify(responseDataToCache));
   }
 
   return {
@@ -716,15 +724,16 @@ async function getTeamIdFromSlug(
 
 const refreshAvailableSlotsCache = async () => {
   try {
-    const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+    // const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+
+    const allKeys = Object.keys(responseStore);
 
     const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
     for (const batchedKeys of batchedKeysArr) {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
-          const dataToRefreshJSON = await redis.get(getAvailableSlotsCacheKey);
-          if(dataToRefreshJSON){
-            const dataToRefresh = (parse(dataToRefreshJSON)) as GetScheduleOptions & {response: any}
+          const dataToRefresh = responseStore[getAvailableSlotsCacheKey];
+          if(dataToRefresh){
             // check if end time has passed and remove the item from cache else, refresh it
             // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
             if(new Date() < new Date(dataToRefresh.input.endTime)){
@@ -742,7 +751,33 @@ const refreshAvailableSlotsCache = async () => {
   } 
 }
 
-
 setInterval(()=>{
   refreshAvailableSlotsCache()
 }, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 15*1000))
+
+
+
+const initResponseStore = async () => {
+  try {
+    const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+
+    const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
+    for (const batchedKeys of batchedKeysArr) {
+      await Promise.all(
+        batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
+          const dataInStore = await redis.get(getAvailableSlotsCacheKey);
+          if(dataInStore){
+            responseStore[getAvailableSlotsCacheKey] = parse(dataInStore);
+          }
+        })
+      );
+    }
+  } catch (error) {
+    // TODO_ESA: Add incident reporting here when cache refresh fails
+    console.log(`error in initResponseStore`, error);
+  } 
+}
+
+setTimeout(()=>{
+  initResponseStore()
+}, 0)
