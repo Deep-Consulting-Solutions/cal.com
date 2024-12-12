@@ -1,5 +1,5 @@
 // eslint-disable-next-line no-restricted-imports
-import { countBy } from "lodash";
+import { chunk, countBy } from "lodash";
 import { v4 as uuid } from "uuid";
 
 import { getAggregatedAvailability } from "@calcom/core/getAggregatedAvailability";
@@ -29,6 +29,7 @@ import { TRPCError } from "@trpc/server";
 
 import type { GetScheduleOptions } from "./getSchedule.handler";
 import type { TGetScheduleInputSchema } from "./getSchedule.schema";
+import { redis } from "@esa/cal-additions/lib/redis";
 
 export const checkIfIsAvailable = ({
   time,
@@ -295,7 +296,19 @@ function applyOccupiedSeatsToCurrentSeats(currentSeats: CurrentSeats, occupiedSe
   return currentSeats;
 }
 
-export async function getAvailableSlots({ input, ctx }: GetScheduleOptions) {
+const getAvailableSlotsCacheKeyPrefix = 'getAvailableSlotsCache_';
+
+export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypassCacheResponse = false) {
+  // check the cache for a response with this timezone
+  const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${input.eventTypeId}_${input.eventTypeSlug}`;
+  
+  if((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse)){
+    const response = await redis.get(cacheKey);
+    if(response){
+      const responseDetails: any = JSON.parse(response);
+      return responseDetails.response;
+    }
+  }
   const orgDetails = orgDomainConfig(ctx?.req);
   if (process.env.INTEGRATION_TEST_MODE === "true") {
     logger.settings.minLevel = 2;
@@ -651,6 +664,13 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions) {
   );
   loggerWithEventDetails.debug(`Available slots: ${JSON.stringify(computedAvailableSlots)}`);
 
+  if((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true')){
+    // store the response for a particular computation, it will then keep refreshing itself until it end date passes
+    await redis.set(cacheKey, JSON.stringify({input, ctx, response: {
+      slots: computedAvailableSlots,
+    }}))
+  }
+
   return {
     slots: computedAvailableSlots,
   };
@@ -685,3 +705,36 @@ async function getTeamIdFromSlug(
   });
   return team?.id;
 }
+
+const refreshAvailableSlotsCache = async () => {
+  try {
+    const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+
+    const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
+    for (const batchedKeys of batchedKeysArr) {
+      await Promise.all(
+        batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
+          const dataToRefreshJSON = await redis.get(getAvailableSlotsCacheKey);
+          if(dataToRefreshJSON){
+            const dataToRefresh = (JSON.parse(dataToRefreshJSON)) as GetScheduleOptions & {response: any}
+            // check if end time has passed and remove the item from cache else, refresh it
+            // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
+            if(new Date() < new Date(dataToRefresh.input.endTime)){
+              await getAvailableSlots(dataToRefresh, true);
+            } else{
+              await redis.del(getAvailableSlotsCacheKey);
+            } 
+          }
+        })
+      );
+    }
+  } catch (error) {
+    // TODO_ESA: Add incident reporting here when cache refresh fails
+    console.log(`error in refreshAvailableSlotsCache`, error);
+  } 
+}
+
+
+setInterval(()=>{
+  refreshAvailableSlotsCache()
+}, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 15*1000))
