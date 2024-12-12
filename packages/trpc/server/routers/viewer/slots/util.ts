@@ -29,7 +29,8 @@ import { TRPCError } from "@trpc/server";
 
 import type { GetScheduleOptions } from "./getSchedule.handler";
 import type { TGetScheduleInputSchema } from "./getSchedule.schema";
-import { redis } from "@esa/cal-additions/lib/redis";
+import { redis } from "../../../../../esa/lib/redis";
+
 
 export const checkIfIsAvailable = ({
   time,
