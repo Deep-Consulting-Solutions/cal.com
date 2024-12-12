@@ -1,6 +1,7 @@
 // eslint-disable-next-line no-restricted-imports
 import { chunk, countBy } from "lodash";
 import { v4 as uuid } from "uuid";
+import { stringify, parse } from 'flatted';
 
 import { getAggregatedAvailability } from "@calcom/core/getAggregatedAvailability";
 import { getBusyTimesForLimitChecks } from "@calcom/core/getBusyTimes";
@@ -306,7 +307,7 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
   if((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse)){
     const response = await redis.get(cacheKey);
     if(response){
-      const responseDetails: any = JSON.parse(response);
+      const responseDetails: any = parse(response);
       return (responseDetails.response) as {
         slots: Record<string, {
             time: string;
@@ -673,7 +674,7 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
 
   if((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true')){
     // store the response for a particular computation, it will then keep refreshing itself until it end date passes
-    await redis.set(cacheKey, JSON.stringify({input, ctx, response: {
+    await redis.set(cacheKey, stringify({input, ctx, response: {
       slots: computedAvailableSlots,
     }}))
   }
@@ -723,7 +724,7 @@ const refreshAvailableSlotsCache = async () => {
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataToRefreshJSON = await redis.get(getAvailableSlotsCacheKey);
           if(dataToRefreshJSON){
-            const dataToRefresh = (JSON.parse(dataToRefreshJSON)) as GetScheduleOptions & {response: any}
+            const dataToRefresh = (parse(dataToRefreshJSON)) as GetScheduleOptions & {response: any}
             // check if end time has passed and remove the item from cache else, refresh it
             // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
             if(new Date() < new Date(dataToRefresh.input.endTime)){
