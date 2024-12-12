@@ -307,7 +307,13 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
     const response = await redis.get(cacheKey);
     if(response){
       const responseDetails: any = JSON.parse(response);
-      return responseDetails.response;
+      return (responseDetails.response) as {
+        slots: Record<string, {
+            time: string;
+            attendees?: number | undefined;
+            bookingUid?: string | undefined;
+        }[]>;
+    };
     }
   }
   const orgDetails = orgDomainConfig(ctx?.req);
