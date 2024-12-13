@@ -17,11 +17,11 @@ async function postHandler(req: NextApiRequest) {
 
   const { crmUsers } = await getManagedCrmUsers(req);
   for (const crmUser of crmUsers) {
-    const hasNotStartedSetup = crmUser.status === "Not Started";
+    const hasNotStartedSetup = crmUser.status === "Pending Completion";
     if (hasNotStartedSetup) {
       incompleteSetups.push({
         email: crmUser.email,
-        pendingTasks: ["Managed setup has not been done"],
+        pendingTasks: ["Managed setup has not been completed"],
       });
       continue;
     }

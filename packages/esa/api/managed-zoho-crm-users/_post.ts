@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PrismaClient } from "@prisma/client";
+import crypto from "crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { stringify } from "querystring";
 
@@ -74,7 +75,7 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   // create or update cal user
   const email = body.email.toLowerCase();
   const username = email.split("@").shift();
-  const password = "some-default-password";
+  const password = crypto.randomUUID();
   const hashedPassword = await hashPassword(password);
 
   // first get the user
@@ -85,11 +86,10 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   const user = await prisma.user.upsert({
     where: { email },
     update: {
-      name: body.name,
-      username,
-      emailVerified: new Date(Date.now()),
+      name: existingUser?.name || body.name,
+      emailVerified: existingUser?.emailVerified || new Date(Date.now()),
       identityProvider: IdentityProvider.CAL,
-      timeZone: body.timeZone,
+      timeZone: existingUser?.timeZone || body.timeZone,
       completedOnboarding: true,
     },
     create: {
