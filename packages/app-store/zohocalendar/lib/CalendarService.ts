@@ -18,8 +18,8 @@ import type { CredentialPayload } from "@calcom/types/Credential";
 import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import type { ZohoAuthCredentials, FreeBusy, ZohoCalendarListResp } from "../types/ZohoCalendar";
 import { zohoClient } from '../../../esa/lib/zoho';
-import { redis } from "../../../esa/lib/redis";
-import { freeBusyStore, userInfoStore } from "../../../esa/store/store";
+// import { redis } from "../../../esa/lib/redis";
+import { freeBusyStore, userInfoStore, FreeBusyResponse } from "../../../esa/store/store";
 
 const zohoKeysSchema = z.object({
   client_id: z.string(),
@@ -30,6 +30,8 @@ export default class ZohoCalendarService implements Calendar {
   private integrationName = "";
   private log: typeof logger;
   auth: { getToken: () => Promise<ZohoAuthCredentials> };
+  credential: CredentialPayload;
+  calUserID: string;
 
   constructor(credential: CredentialPayload) {
     this.integrationName = "zoho_calendar";
@@ -37,6 +39,8 @@ export default class ZohoCalendarService implements Calendar {
     this.log = logger.getSubLogger({
       prefix: [`[[lib] ${this.integrationName}`],
     });
+    this.credential = credential;
+    this.calUserID = credential.userId;
   }
 
   private zohoAuth = (credential: CredentialPayload) => {
@@ -136,6 +140,37 @@ export default class ZohoCalendarService implements Calendar {
     }
 
     return this.handleData(response, this.log);
+  };
+
+  private hasZohoFreeBusyDataChanged = (currentDatarr: FreeBusyResponse, newDatarr: FreeBusyResponse) => {
+    const oldData = currentDatarr;
+    const newdata = newDatarr;
+  
+    if (oldData.freebusy.length === 0 && newdata.freebusy.length !== 0){
+      return true;
+    }
+  
+    if (newdata.freebusy.length === 0 && oldData.freebusy.length !== 0){
+      return true;
+    }
+  
+    const allDatainNewIsInOld = newdata.freebusy.every((newBusySlot) => {
+      return !!oldData.freebusy.find(
+        (oldBusySlot) =>
+          newBusySlot.startTime === oldBusySlot.startTime &&
+          newBusySlot.endTime === oldBusySlot.endTime
+      );
+    });
+  
+    const allDatainOldIsInNew = oldData.freebusy.every((oldBusySlot) => {
+      return !!newdata.freebusy.find(
+        (newBusySlot) =>
+          oldBusySlot.startTime === newBusySlot.startTime &&
+          oldBusySlot.endTime === newBusySlot.endTime
+      );
+    });
+  
+    return !(allDatainNewIsInOld && allDatainOldIsInNew);
   };
 
   async createEvent(event: CalendarEvent): Promise<NewCalendarEventType> {
@@ -270,7 +305,11 @@ export default class ZohoCalendarService implements Calendar {
     }
   }
 
-  private async getBusyData(dateFrom: string, dateTo: string, userEmail: string) {
+  private async getBusyData(dateFrom: string, dateTo: string, userEmail: string, additionalData: {
+    itegrationCalendars: IntegrationCalendar[];
+    defaultDateFrom: string;
+    defaultDateTo: string;
+  }) {
     const query = stringify({
       sdate: dateFrom,
       edate: dateTo,
@@ -279,7 +318,8 @@ export default class ZohoCalendarService implements Calendar {
     });
 
     const busyDataKey = `${dateFrom}${dateTo}${userEmail}`;
-    let response: any = freeBusyStore[busyDataKey];
+    const freeBusyUserDataAtKey  = !!freeBusyStore[this.calUserID]? freeBusyUserData[busyDataKey]: undefined;
+    let response = !!freeBusyUserDataAtKey? freeBusyUserDataAtKey.response : undefined;
     if(!response){
       // const cachedResponse = await redis.get(busyDataKey);
       // if(cachedResponse){
@@ -290,10 +330,48 @@ export default class ZohoCalendarService implements Calendar {
       response = await this.fetcher(`calendars/freebusy?${query}`, {
         method: "GET",
       });
-      freeBusyStore[busyDataKey] = response;
+      const now = dayjs();
+      if(!!freeBusyStore[this.calUserID]){
+        if(freeBusyStore[this.calUserID][busyDataKey]){
+          // case when the data already exists, we will need to compare with existing data
+          freeBusyStore[this.calUserID][busyDataKey] = {
+            changed: this.hasZohoFreeBusyDataChanged(freeBusyStore[this.calUserID][busyDataKey]// need to update the type here
+              // update TODOS
+              , response.data),
+            credential: this.credential,
+            dateFrom: additionalData.defaultDateFrom,
+            dateTo: additionalData.defaultDateTo,
+            integrationCalendars: additionalData.itegrationCalendars,
+            lastUpdatedAt: now,
+            response: response,
+          }
+        } else {
+          freeBusyStore[this.calUserID][busyDataKey] = {
+            changed: false,
+            credential: this.credential,
+            dateFrom: additionalData.defaultDateFrom,
+            dateTo: additionalData.defaultDateTo,
+            integrationCalendars: additionalData.itegrationCalendars,
+            lastUpdatedAt: now,
+            response: response,
+          }
+        }
+      } else {
+        freeBusyStore[this.calUserID] = {};
+        freeBusyStore[this.calUserID][busyDataKey] = {
+          changed: false,
+          credential: this.credential,
+          dateFrom: additionalData.defaultDateFrom,
+          dateTo: additionalData.defaultDateTo,
+          integrationCalendars: additionalData.itegrationCalendars,
+          lastUpdatedAt: now,
+          response: response,
+        }
+
+      }
       // await redis.setex(busyDataKey, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 15), JSON.stringify(response));
-    // }
-  }
+      // }
+    }
 
     let data: any
     try {
@@ -353,7 +431,12 @@ export default class ZohoCalendarService implements Calendar {
         const busyData = await this.getBusyData(
           originalStartDate.format("YYYYMMDD[T]HHmmss[Z]"),
           originalEndDate.format("YYYYMMDD[T]HHmmss[Z]"),
-          userInfo.Email
+          userInfo.Email,
+          {
+            defaultDateFrom: dateFrom,
+            defaultDateTo: dateTo,
+            itegrationCalendars: selectedCalendars,
+          }
         );
         return busyData;
       } else {
@@ -372,7 +455,12 @@ export default class ZohoCalendarService implements Calendar {
             ...(await this.getBusyData(
               startDate.format("YYYYMMDD[T]HHmmss[Z]"),
               endDate.format("YYYYMMDD[T]HHmmss[Z]"),
-              userInfo.Email
+              userInfo.Email,
+              {
+                defaultDateFrom: dateFrom,
+                defaultDateTo: dateTo,
+                itegrationCalendars: selectedCalendars,
+              }
             ))
           );
 
@@ -483,3 +571,34 @@ export default class ZohoCalendarService implements Calendar {
     return zohoEvent;
   };
 }
+
+
+const refreshZohoFreeBusyData = async () => {
+  try {
+    await Promise.all(Object.entries(freeBusyStore).map(async ([userID, avaiabilityDataSet]) => {
+      const usersAvailabilityEntries = Object.entries(avaiabilityDataSet);
+      if(!usersAvailabilityEntries.length) return;
+      const credential: CredentialPayload = avaiabilityDataSet[usersAvailabilityEntries[0][0]].credential;
+      const usersZohoCalendarService = new ZohoCalendarService(credential);
+      // For each availability key cached from zoho update the cache setting changed to true where a change has occurred so 
+      for (const [availabilityKey, {dateFrom, dateTo, integrationCalendars}] of usersAvailabilityEntries){
+        // check if the availability data was updated within the last 20 seconds and skip if it has been
+        const latestUpdateTime = freeBusyStore[userID][availabilityKey].lastUpdatedAt;
+        const past20SecondTime = dayjs().subtract(20, "second");
+        const isUpdatedInLast20seconds = latestUpdateTime.isAfter(past20SecondTime);
+        if(!isUpdatedInLast20seconds){
+          await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars);
+        }
+      }
+    }))
+  } catch (error) {
+    // ESA_TODO: add incident reporting
+    console.log(`Error refreshing free busy data on zoho`, error);
+  }
+}
+
+
+
+setInterval(()=>{
+  refreshZohoFreeBusyData();
+}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 30))

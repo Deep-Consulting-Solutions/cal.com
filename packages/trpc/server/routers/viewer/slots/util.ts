@@ -684,7 +684,7 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
       }
     }
     responseStore[cacheKey] = responseDataToCache 
-    await redis.set(cacheKey, stringify(responseDataToCache));
+    // await redis.set(cacheKey, stringify(responseDataToCache));
   }
 
   return {
@@ -757,27 +757,27 @@ setInterval(()=>{
 
 
 
-const initResponseStore = async () => {
-  try {
-    const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+// const initResponseStore = async () => {
+//   try {
+//     const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
 
-    const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
-    for (const batchedKeys of batchedKeysArr) {
-      await Promise.all(
-        batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
-          const dataInStore = await redis.get(getAvailableSlotsCacheKey);
-          if(dataInStore){
-            responseStore[getAvailableSlotsCacheKey] = parse(dataInStore);
-          }
-        })
-      );
-    }
-  } catch (error) {
-    // TODO_ESA: Add incident reporting here when cache refresh fails
-    console.log(`error in initResponseStore`, error);
-  } 
-}
+//     const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
+//     for (const batchedKeys of batchedKeysArr) {
+//       await Promise.all(
+//         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
+//           const dataInStore = await redis.get(getAvailableSlotsCacheKey);
+//           if(dataInStore){
+//             responseStore[getAvailableSlotsCacheKey] = parse(dataInStore);
+//           }
+//         })
+//       );
+//     }
+//   } catch (error) {
+//     // TODO_ESA: Add incident reporting here when cache refresh fails
+//     console.log(`error in initResponseStore`, error);
+//   } 
+// }
 
-setTimeout(()=>{
-  initResponseStore()
-}, 0)
+// setTimeout(()=>{
+//   initResponseStore()
+// }, 0)
