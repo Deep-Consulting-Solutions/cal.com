@@ -303,10 +303,9 @@ const getAvailableSlotsCacheKeyPrefix = 'getAvailableSlotsCache_';
 
 export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypassCacheResponse = false) {
   // check the cache for a response with this timezone
-  const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${input.eventTypeId}_${input.eventTypeSlug}`;
+  const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${input.eventTypeId || ''}_${input.eventTypeSlug || ''}`;
   
   if((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse)){
-    // const response = await redis.get(cacheKey);
     const responseDetails = responseStore[cacheKey];
     if(responseDetails){
       // const responseDetails: any = parse(response);
@@ -676,15 +675,20 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
 
   if((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true')){
     // store the response for a particular computation, it will then keep refreshing itself until it end date passes
-    const responseDataToCache = {
+    const responseDataToCache: {
+      response: any;
+      userIDs: string[];
+      input: any; 
+      ctx: any;
+  } = {
       input, 
       ctx, 
+      userIDs: allUserIds,
       response: {
       slots: computedAvailableSlots,
       }
     }
-    responseStore[cacheKey] = responseDataToCache 
-    // await redis.set(cacheKey, stringify(responseDataToCache));
+    responseStore[cacheKey] = responseDataToCache;
   }
 
   return {
@@ -724,8 +728,6 @@ async function getTeamIdFromSlug(
 
 const refreshAvailableSlotsCache = async () => {
   try {
-    // const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
-
     const allKeys = Object.keys(responseStore);
 
     const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
@@ -733,6 +735,8 @@ const refreshAvailableSlotsCache = async () => {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataToRefresh = responseStore[getAvailableSlotsCacheKey];
+          // Check if the users have their data on Zohocalendar or on cal changed, if not do not refresh
+          // Later also check if the changed availability data is in the range + or - 2 days of this cache 
           if(dataToRefresh){
             // check if end time has passed and remove the item from cache else, refresh it
             // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy

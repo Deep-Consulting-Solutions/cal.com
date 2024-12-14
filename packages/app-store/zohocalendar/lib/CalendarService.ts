@@ -309,7 +309,9 @@ export default class ZohoCalendarService implements Calendar {
     itegrationCalendars: IntegrationCalendar[];
     defaultDateFrom: string;
     defaultDateTo: string;
-  }) {
+  },
+  skipCache: boolean
+) {
     const query = stringify({
       sdate: dateFrom,
       edate: dateTo,
@@ -318,26 +320,24 @@ export default class ZohoCalendarService implements Calendar {
     });
 
     const busyDataKey = `${dateFrom}${dateTo}${userEmail}`;
-    const freeBusyUserDataAtKey  = !!freeBusyStore[this.calUserID]? freeBusyUserData[busyDataKey]: undefined;
+    const freeBusyUserDataAtKey  = !!freeBusyStore[this.calUserID]? freeBusyStore[this.calUserID][busyDataKey]: undefined;
     let response = !!freeBusyUserDataAtKey? freeBusyUserDataAtKey.response : undefined;
-    if(!response){
+    if(!response || (!!response && skipCache)){
       // const cachedResponse = await redis.get(busyDataKey);
       // if(cachedResponse){
       //   response = JSON.parse(cachedResponse);
       // }
 
       // if(!response){
-      response = await this.fetcher(`calendars/freebusy?${query}`, {
+      response = (await this.fetcher(`calendars/freebusy?${query}`, {
         method: "GET",
-      });
+      })) as FreeBusyResponse;
       const now = dayjs();
       if(!!freeBusyStore[this.calUserID]){
-        if(freeBusyStore[this.calUserID][busyDataKey]){
+        if(!!freeBusyStore[this.calUserID][busyDataKey]){
           // case when the data already exists, we will need to compare with existing data
           freeBusyStore[this.calUserID][busyDataKey] = {
-            changed: this.hasZohoFreeBusyDataChanged(freeBusyStore[this.calUserID][busyDataKey]// need to update the type here
-              // update TODOS
-              , response.data),
+            changed: this.hasZohoFreeBusyDataChanged(freeBusyStore[this.calUserID][busyDataKey].response, response),
             credential: this.credential,
             dateFrom: additionalData.defaultDateFrom,
             dateTo: additionalData.defaultDateTo,
@@ -398,7 +398,8 @@ export default class ZohoCalendarService implements Calendar {
   async getAvailability(
     dateFrom: string,
     dateTo: string,
-    selectedCalendars: IntegrationCalendar[]
+    selectedCalendars: IntegrationCalendar[],
+    skipCache = false
   ): Promise<EventBusyDate[]> {
     const selectedCalendarIds = selectedCalendars
       .filter((e) => e.integration === this.integrationName)
@@ -436,7 +437,8 @@ export default class ZohoCalendarService implements Calendar {
             defaultDateFrom: dateFrom,
             defaultDateTo: dateTo,
             itegrationCalendars: selectedCalendars,
-          }
+          },
+          skipCache
         );
         return busyData;
       } else {
@@ -460,7 +462,8 @@ export default class ZohoCalendarService implements Calendar {
                 defaultDateFrom: dateFrom,
                 defaultDateTo: dateTo,
                 itegrationCalendars: selectedCalendars,
-              }
+              },
+              skipCache
             ))
           );
 
@@ -587,7 +590,7 @@ const refreshZohoFreeBusyData = async () => {
         const past20SecondTime = dayjs().subtract(20, "second");
         const isUpdatedInLast20seconds = latestUpdateTime.isAfter(past20SecondTime);
         if(!isUpdatedInLast20seconds){
-          await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars);
+          await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
         }
       }
     }))

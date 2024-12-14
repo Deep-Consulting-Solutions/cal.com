@@ -3,14 +3,14 @@ import type { CredentialPayload } from "@calcom/types/Credential";
 import type { IntegrationCalendar} from "@calcom/types/Calendar";
 
 export interface FreeBusyResponse {
-    freebusy: {
-        startTime: string;
-        endTime: string;
-        fbtype: string;
-    }[];
+        freebusy: {
+            startTime: string;
+            endTime: string;
+            fbtype: string;
+        }[];
   }
 
-interface FreeBusyStore{
+interface FreeBusyStore {
     [userID: string]: {
         [availabilityKey: string]: {
             changed: boolean;
@@ -24,9 +24,18 @@ interface FreeBusyStore{
     }
 }
 
+interface ResponseStore {
+    [responseKey: string]: {
+        response: any;
+        userIDs: string[];
+        input: any; 
+        ctx: any;
+    }
+}
+
 export let freeBusyStore: FreeBusyStore = {};
 export let userInfoStore: {[key: string]: any} = {};
-export let responseStore: {[key: string]: any} = {};
+export let responseStore: ResponseStore = {};
 
 
 
