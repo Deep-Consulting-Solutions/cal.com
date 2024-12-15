@@ -677,7 +677,7 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
     // store the response for a particular computation, it will then keep refreshing itself until it end date passes
     const responseDataToCache: {
       response: any;
-      userIDs: string[];
+      userIDs: number[];
       input: any; 
       ctx: any;
       dateFrom: string;
