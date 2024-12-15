@@ -31,7 +31,7 @@ export default class ZohoCalendarService implements Calendar {
   private log: typeof logger;
   auth: { getToken: () => Promise<ZohoAuthCredentials> };
   credential: CredentialPayload;
-  calUserID: string;
+  calUserID: number | null;
 
   constructor(credential: CredentialPayload) {
     this.integrationName = "zoho_calendar";
