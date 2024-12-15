@@ -611,4 +611,4 @@ const refreshZohoFreeBusyData = async () => {
 
 setInterval(()=>{
   refreshZohoFreeBusyData();
-}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 30))
+}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 60))
