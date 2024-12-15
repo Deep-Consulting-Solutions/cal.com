@@ -1,14 +1,45 @@
+import { Dayjs} from "@calcom/dayjs";
+import type { CredentialPayload } from "@calcom/types/Credential";
+import type { IntegrationCalendar} from "@calcom/types/Calendar";
 
-export let freeBusyStore: {[key: string]: any} = {};
+export interface FreeBusyResponse {
+        freebusy: {
+            startTime: string;
+            endTime: string;
+            fbtype: string;
+        }[];
+  }
+
+interface FreeBusyStore {
+    [userID: string]: {
+        [availabilityKey: string]: {
+            changed: boolean;
+            response: FreeBusyResponse;
+            credential: CredentialPayload;
+            integrationCalendars: IntegrationCalendar[]
+            dateFrom: string;
+            dateTo: string;
+            lastUpdatedAt: Dayjs;
+        }
+    }
+}
+
+interface ResponseStore {
+    [responseKey: string]: {
+        response: any;
+        userIDs: string[];
+        input: any; 
+        ctx: any;
+        dateFrom: string;
+        dateTo: string;
+    }
+}
+
+export let freeBusyStore: FreeBusyStore = {};
 export let userInfoStore: {[key: string]: any} = {};
-export let responseStore: {[key: string]: any} = {};
+export let responseStore: ResponseStore = {};
 
 
-
-
-setInterval(()=>{
-    freeBusyStore={};
-}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 30))
 
 // Reset the user info store hourly
 setInterval(()=>{
