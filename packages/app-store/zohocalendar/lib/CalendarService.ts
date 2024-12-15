@@ -319,8 +319,9 @@ export default class ZohoCalendarService implements Calendar {
       uemail: userEmail,
     });
 
+    const callUserID = this.calUserID || '';
     const busyDataKey = `${dateFrom}${dateTo}${userEmail}`;
-    const freeBusyUserDataAtKey  = !!freeBusyStore[this.calUserID]? freeBusyStore[this.calUserID][busyDataKey]: undefined;
+    const freeBusyUserDataAtKey  = !!freeBusyStore[callUserID]? freeBusyStore[callUserID][busyDataKey]: undefined;
     let response = !!freeBusyUserDataAtKey? freeBusyUserDataAtKey.response : undefined;
     if(!response || (!!response && skipCache)){
       // const cachedResponse = await redis.get(busyDataKey);
@@ -333,11 +334,12 @@ export default class ZohoCalendarService implements Calendar {
         method: "GET",
       })) as FreeBusyResponse;
       const now = dayjs();
-      if(!!freeBusyStore[this.calUserID]){
-        if(!!freeBusyStore[this.calUserID][busyDataKey]){
+      
+      if(!!freeBusyStore[callUserID]){
+        if(!!freeBusyStore[callUserID][busyDataKey]){
           // case when the data already exists, we will need to compare with existing data
-          freeBusyStore[this.calUserID][busyDataKey] = {
-            changed: this.hasZohoFreeBusyDataChanged(freeBusyStore[this.calUserID][busyDataKey].response, response),
+          freeBusyStore[callUserID][busyDataKey] = {
+            changed: this.hasZohoFreeBusyDataChanged(freeBusyStore[callUserID][busyDataKey].response, response),
             credential: this.credential,
             dateFrom: additionalData.defaultDateFrom,
             dateTo: additionalData.defaultDateTo,
@@ -346,7 +348,7 @@ export default class ZohoCalendarService implements Calendar {
             response: response,
           }
         } else {
-          freeBusyStore[this.calUserID][busyDataKey] = {
+          freeBusyStore[callUserID][busyDataKey] = {
             changed: false,
             credential: this.credential,
             dateFrom: additionalData.defaultDateFrom,
@@ -357,8 +359,8 @@ export default class ZohoCalendarService implements Calendar {
           }
         }
       } else {
-        freeBusyStore[this.calUserID] = {};
-        freeBusyStore[this.calUserID][busyDataKey] = {
+        freeBusyStore[callUserID] = {};
+        freeBusyStore[callUserID][busyDataKey] = {
           changed: false,
           credential: this.credential,
           dateFrom: additionalData.defaultDateFrom,
