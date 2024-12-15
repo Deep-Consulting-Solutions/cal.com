@@ -27,7 +27,7 @@ interface FreeBusyStore {
 interface ResponseStore {
     [responseKey: string]: {
         response: any;
-        userIDs: string[];
+        userIDs: number[];
         input: any; 
         ctx: any;
         dateFrom: string;
