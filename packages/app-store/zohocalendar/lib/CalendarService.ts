@@ -585,12 +585,19 @@ const refreshZohoFreeBusyData = async () => {
       const usersZohoCalendarService = new ZohoCalendarService(credential);
       // For each availability key cached from zoho update the cache setting changed to true where a change has occurred so 
       for (const [availabilityKey, {dateFrom, dateTo, integrationCalendars}] of usersAvailabilityEntries){
-        // check if the availability data was updated within the last 20 seconds and skip if it has been
-        const latestUpdateTime = freeBusyStore[userID][availabilityKey].lastUpdatedAt;
-        const past20SecondTime = dayjs().subtract(20, "second");
-        const isUpdatedInLast20seconds = latestUpdateTime.isAfter(past20SecondTime);
-        if(!isUpdatedInLast20seconds){
-          await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
+        // if dateTo is in the past delete the key else continue
+        const availabilityPeriodIsInPast = dayjs().add(1, 'day').isAfter(dayjs(dateTo), 'millisecond');
+
+        if(!availabilityPeriodIsInPast) {
+          // check if the availability data was updated within the last 20 seconds and skip if it has been
+          const latestUpdateTime = freeBusyStore[userID][availabilityKey].lastUpdatedAt;
+          const past20SecondTime = dayjs().subtract(20, "second");
+          const isUpdatedInLast20seconds = latestUpdateTime.isAfter(past20SecondTime, 'millisecond');
+          if(!isUpdatedInLast20seconds){
+            await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
+          }
+        } else {
+          delete freeBusyStore[userID][availabilityKey];
         }
       }
     }))

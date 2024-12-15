@@ -31,7 +31,7 @@ import { TRPCError } from "@trpc/server";
 import type { GetScheduleOptions } from "./getSchedule.handler";
 import type { TGetScheduleInputSchema } from "./getSchedule.schema";
 import { redis } from "../../../../../esa/lib/redis";
-import { responseStore } from "../../../../../esa/store/store";
+import { freeBusyStore, responseStore } from "../../../../../esa/store/store";
 
 
 export const checkIfIsAvailable = ({
@@ -680,13 +680,17 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
       userIDs: string[];
       input: any; 
       ctx: any;
+      dateFrom: string;
+      dateTo: string;
   } = {
       input, 
       ctx, 
       userIDs: allUserIds,
       response: {
       slots: computedAvailableSlots,
-      }
+      },
+      dateFrom: input.startTime,
+      dateTo: input.endTime,
     }
     responseStore[cacheKey] = responseDataToCache;
   }
@@ -730,21 +734,73 @@ const refreshAvailableSlotsCache = async () => {
   try {
     const allKeys = Object.keys(responseStore);
 
+    const delay50millisecs = async () => {
+      await new Promise((resolve, reject) => {
+        setTimeout(()=>{
+          resolve(true);
+        }, 50)
+      })
+      return;
+    }
     const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
     for (const batchedKeys of batchedKeysArr) {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataToRefresh = responseStore[getAvailableSlotsCacheKey];
           // Check if the users have their data on Zohocalendar or on cal changed, if not do not refresh
-          // Later also check if the changed availability data is in the range + or - 2 days of this cache 
-          if(dataToRefresh){
-            // check if end time has passed and remove the item from cache else, refresh it
-            // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
-            if(new Date() < new Date(dataToRefresh.input.endTime)){
-              await getAvailableSlots(dataToRefresh, true);
-            } else{
-              await redis.del(getAvailableSlotsCacheKey);
-            } 
+          // ///////// TODO_ Make sure to add a small wait with Promise so that control can be handed over to the request handlers  
+          // ///////// to respond to requests quickly.
+          if (dataToRefresh){
+            let changedCalendarAvailabilities: {
+              dateFrom: string;
+              dateTo: string;
+            }[] = [];
+            dataToRefresh.userIDs.forEach(userID => {
+              const userChangedAvailabilities = Object.values(freeBusyStore[userID] || {}).filter((avail)=> avail.changed);
+              changedCalendarAvailabilities = [...changedCalendarAvailabilities, ...userChangedAvailabilities];
+            });
+            
+            // Should refresh if data is in the range + or - 2 days of the changed data
+            const startDateToUseInChecks = dayjs(dataToRefresh.dateFrom).subtract(2, 'days');
+            const endDateToUseInChecks = dayjs(dataToRefresh.dateTo).add(2, 'days');
+            
+            const shouldRefreshCacheForKey = changedCalendarAvailabilities.some((changedAvailabilityRange) => {
+              const changedAvailabilityStartTime = dayjs(changedAvailabilityRange.dateFrom);
+              const changedAvailabilityEndTime = dayjs(changedAvailabilityRange.dateTo);
+
+              return changedAvailabilityStartTime.isBetween(
+                startDateToUseInChecks,
+                endDateToUseInChecks,
+                'milliseconds',
+                "[]"
+              ) || changedAvailabilityEndTime.isBetween(
+                startDateToUseInChecks,
+                endDateToUseInChecks,
+                'milliseconds',
+                "[]"
+              )
+            })
+            if(shouldRefreshCacheForKey){
+              // check if end time has passed and remove the item from cache else, refresh it
+              // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
+              if(new Date() < new Date(dataToRefresh.input.endTime)){
+                console.log(`Refreshing response cache for user ${getAvailableSlotsCacheKey}`)
+                await getAvailableSlots(dataToRefresh, true);
+              } else{
+                delete responseStore[getAvailableSlotsCacheKey];
+                // wait 50 milliseconds before continuing
+                await delay50millisecs();
+              } 
+            } else {
+              console.log(`Skipped refreshing response cache for user ${getAvailableSlotsCacheKey}`)
+              // wait 50 milliseconds before continuing
+              await delay50millisecs();
+            }
+            // wait 50 milliseconds before continuing
+            await delay50millisecs();
+          } else {
+            // wait 50 milliseconds before continuing
+            await delay50millisecs();
           }
         })
       );
@@ -757,7 +813,7 @@ const refreshAvailableSlotsCache = async () => {
 
 setInterval(()=>{
   refreshAvailableSlotsCache()
-}, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 15*1000))
+}, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 25*1000))
 
 
 

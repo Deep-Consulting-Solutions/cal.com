@@ -30,6 +30,8 @@ interface ResponseStore {
         userIDs: string[];
         input: any; 
         ctx: any;
+        dateFrom: string;
+        dateTo: string;
     }
 }
 
