@@ -29,7 +29,9 @@ async function postHandler(req: NextApiRequest) {
     // check if user has setup zoho calendar
     const user = await prisma.user.findFirst({
       where: {
-        email: crmUser.email,
+        email: {
+          in: [...crmUser.emailAddresses, crmUser.email],
+        },
       },
     });
     if (!user) {
