@@ -44,6 +44,9 @@ export async function getHandler(req: NextApiRequest) {
         zuid: u.zuid,
         zoomUserId: setupEntry?.zoomUserId,
         email: u.email,
+        emailAddresses:
+          zohoMailAccount?.emailAddress?.map((e: Record<string, string>) => e.mailId?.toLowerCase() || "") ||
+          [],
         name: `${u.first_name} ${u.last_name}`,
         hasZohoCalender: true || !!zohoMailAccount,
         timeZone: zohoMailAccount?.timeZone || u.time_zone,
@@ -53,6 +56,7 @@ export async function getHandler(req: NextApiRequest) {
     userId: string;
     zuid: string;
     email: string;
+    emailAddresses: string[];
     name: string;
     hasZohoCalender: boolean;
     timeZone: string;

@@ -16,6 +16,7 @@ import { appKeysSchema as zohoKeysSchema } from "@calcom/zohocalendar/zod";
 import { sendMail } from "../../lib/mailer";
 import setupZohoCalenderOauthEmail from "../../lib/mailer/templates/setupZohoCalenderOauthEmail";
 import { setupManagedZohoUserRequestSchema } from "../../validation/schemas";
+import { getHandler } from "./_get";
 
 const createSchedule = async (input: { name: string; schedule: any }, user: any, prisma: PrismaClient) => {
   const data: Prisma.ScheduleCreateInput = {
@@ -72,19 +73,34 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(409).json({ message: "Zoho user already has a managed setup in progress" });
   }
 
-  // create or update cal user
   const email = body.email.toLowerCase();
+
+  const managedUsers = await getHandler(req);
+  const { crmUsers } = managedUsers;
+
+  const crmUser = crmUsers.find((user) => user.zuid === body.zuid);
+  if (!crmUser) {
+    return res.status(409).json({ message: `Zoho user with id ${body.zuid} not found` });
+  }
+
+  // create or update cal user
   const username = email.split("@").shift();
   const password = crypto.randomUUID();
   const hashedPassword = await hashPassword(password);
 
   // first get the user
   const existingUser = await prisma.user.findFirst({
-    where: { email },
+    where: {
+      email: {
+        in: [...crmUser.emailAddresses, email],
+      },
+    },
   });
 
   const user = await prisma.user.upsert({
-    where: { email },
+    where: {
+      email: existingUser?.email || email,
+    },
     update: {
       name: existingUser?.name || body.name,
       emailVerified: existingUser?.emailVerified || new Date(Date.now()),
