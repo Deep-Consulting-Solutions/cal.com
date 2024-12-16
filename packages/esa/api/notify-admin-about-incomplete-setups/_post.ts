@@ -33,10 +33,6 @@ async function postHandler(req: NextApiRequest) {
       },
     });
     if (!user) {
-      incompleteSetups.push({
-        email: crmUser.email,
-        pendingTasks: ["Managed setup has not been done"],
-      });
       continue;
     }
 
