@@ -92,7 +92,7 @@ async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   const existingUser = await prisma.user.findFirst({
     where: {
       email: {
-        in: crmUser.emailAddresses,
+        in: [...crmUser.emailAddresses, email],
       },
     },
   });
