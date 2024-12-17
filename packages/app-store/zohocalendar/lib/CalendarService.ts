@@ -320,7 +320,8 @@ export default class ZohoCalendarService implements Calendar {
     });
 
     const callUserID = this.calUserID || '';
-    const busyDataKey = `${dateFrom}${dateTo}${userEmail}`;
+    // TODO_ESA____ Fix busyDataKey, part of it in the date after the T is too specific
+    const busyDataKey = `${dateFrom.split('T')[0]}_${dateTo.split('T')[0]}_${userEmail}`;
     const freeBusyUserDataAtKey  = !!freeBusyStore[callUserID]? freeBusyStore[callUserID][busyDataKey]: undefined;
     let response = !!freeBusyUserDataAtKey? freeBusyUserDataAtKey.response : undefined;
     if(!response || (!!response && skipCache)){
@@ -597,6 +598,7 @@ const refreshZohoFreeBusyData = async () => {
           const isUpdatedInLast6seconds = latestUpdateTime.isAfter(past6SecondTime, 'millisecond');
           if(!isUpdatedInLast6seconds){
             await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
+            // add a small delay after each update of availability so the 2 following each other are not perceived as concurrent
           }
         } else {
           delete freeBusyStore[userID][availabilityKey];
