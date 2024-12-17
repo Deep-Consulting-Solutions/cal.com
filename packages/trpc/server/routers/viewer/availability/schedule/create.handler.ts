@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 
 import type { TrpcSessionUser } from "../../../../trpc";
 import type { TCreateInputSchema } from "./create.schema";
+import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "../../slots/util";
 
 type CreateOptions = {
   ctx: {
@@ -70,6 +71,11 @@ export const createHandler = async ({ input, ctx }: CreateOptions) => {
       },
     });
   }
+
+  refreshAvailableSlotsCache(
+    CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, 
+    [user.id]
+  )
 
   return { schedule };
 };

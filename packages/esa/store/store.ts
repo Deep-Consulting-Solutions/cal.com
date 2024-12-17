@@ -32,6 +32,7 @@ interface ResponseStore {
         ctx: any;
         dateFrom: string;
         dateTo: string;
+        eventTypeSlug: string;
     }
 }
 

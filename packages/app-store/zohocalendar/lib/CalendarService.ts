@@ -591,11 +591,11 @@ const refreshZohoFreeBusyData = async () => {
         const availabilityPeriodIsInPast = dayjs().add(1, 'day').isAfter(dayjs(dateTo), 'millisecond');
 
         if(!availabilityPeriodIsInPast) {
-          // check if the availability data was updated within the last 20 seconds and skip if it has been
+          // check if the availability data was updated within the last 6 seconds and skip if it has been
           const latestUpdateTime = freeBusyStore[userID][availabilityKey].lastUpdatedAt;
-          const past20SecondTime = dayjs().subtract(20, "second");
-          const isUpdatedInLast20seconds = latestUpdateTime.isAfter(past20SecondTime, 'millisecond');
-          if(!isUpdatedInLast20seconds){
+          const past6SecondTime = dayjs().subtract(6, "second");
+          const isUpdatedInLast6seconds = latestUpdateTime.isAfter(past6SecondTime, 'millisecond');
+          if(!isUpdatedInLast6seconds){
             await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
           }
         } else {
@@ -613,4 +613,4 @@ const refreshZohoFreeBusyData = async () => {
 
 setInterval(()=>{
   refreshZohoFreeBusyData();
-}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 60*1000))
+}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 20*1000))
