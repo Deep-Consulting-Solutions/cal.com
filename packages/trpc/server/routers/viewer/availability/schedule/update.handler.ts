@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import type { TrpcSessionUser } from "../../../../trpc";
 import { setupDefaultSchedule } from "../util";
 import type { TUpdateInputSchema } from "./update.schema";
+import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "../../slots/util";
 
 type UpdateOptions = {
   ctx: {
@@ -118,6 +119,11 @@ export const updateHandler = async ({ input, ctx }: UpdateOptions) => {
   });
 
   const userAvailability = transformScheduleToAvailabilityForClient(schedule);
+
+  refreshAvailableSlotsCache(
+    CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, 
+    [user.id]
+  )
 
   return {
     schedule,

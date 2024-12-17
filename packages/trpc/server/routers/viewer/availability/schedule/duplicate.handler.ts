@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 
 import type { TrpcSessionUser } from "../../../../trpc";
 import type { TScheduleDuplicateSchema } from "./duplicate.schema";
+import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "../../slots/util";
 
 type DuplicateScheduleOptions = {
   ctx: {
@@ -62,6 +63,11 @@ export const duplicateHandler = async ({ ctx, input }: DuplicateScheduleOptions)
     const newSchedule = await prisma.schedule.create({
       data,
     });
+
+    refreshAvailableSlotsCache(
+      CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, 
+      [user.id]
+    )
 
     return { schedule: newSchedule };
   } catch (error) {

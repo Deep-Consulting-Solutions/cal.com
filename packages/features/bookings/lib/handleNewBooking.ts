@@ -101,6 +101,7 @@ import { refreshCredentials } from "./getAllCredentialsForUsersOnEvent/refreshCr
 import getBookingDataSchema from "./getBookingDataSchema";
 import handleSeats from "./handleSeats/handleSeats";
 import type { BookingSeat } from "./handleSeats/types";
+import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "@calcom/trpc/server/routers/viewer/slots/util";
 
 const translator = short();
 const log = logger.getSubLogger({ prefix: ["[api] book:user"] });
@@ -2336,12 +2337,22 @@ async function handler(
     },
   };
 
-  return {
+  const responseToReturn = {
     ...bookingResponse,
     ...luckyUserResponse,
     references: referencesToCreate,
     seatReferenceUid: evt.attendeeSeatId,
   };
+
+  // No need to wait for this, it is a background process and has its try catch
+  refreshAvailableSlotsCache(
+    CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED, 
+    [responseToReturn.userId], 
+    reqBody.start,
+    reqBody.end 
+  )
+
+  return responseToReturn;
 }
 
 export default handler;
