@@ -2347,7 +2347,7 @@ async function handler(
   // No need to wait for this, it is a background process and has its try catch
   refreshAvailableSlotsCache(
     CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED, 
-    [responseToReturn.userId], 
+    [responseToReturn.userId || ''], 
     reqBody.start,
     reqBody.end 
   )
