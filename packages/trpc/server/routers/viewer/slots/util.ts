@@ -741,8 +741,8 @@ export enum CACHE_REFRESH_REASON_ENUM  {
 export const refreshAvailableSlotsCache = async (
   cacheRefeshReason: CACHE_REFRESH_REASON_ENUM = CACHE_REFRESH_REASON_ENUM.EXTERNAL_CALENDAR_UPDATE,
   userIDs?: (string | number)[],
-  startTime?: string,
-  endTime?: string,
+  startTime?: string | Date,
+  endTime?: string | Date,
 ) => {
   try {
     const allKeys = Object.keys(responseStore);
