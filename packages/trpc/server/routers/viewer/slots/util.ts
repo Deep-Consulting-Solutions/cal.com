@@ -765,8 +765,8 @@ export const refreshAvailableSlotsCache = async (
           // ///////// to respond to requests quickly.
           if (dataToRefresh){
             let changedCalendarAvailabilities: {
-              dateFrom: string;
-              dateTo: string;
+              dateFrom: string | Date;
+              dateTo: string | Date;
             }[] = [];
             let shouldRefreshBecauseUserAvailabilityInCalWasUpdated = false; 
             if(cacheRefeshReason === CACHE_REFRESH_REASON_ENUM.EXTERNAL_CALENDAR_UPDATE){
