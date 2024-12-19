@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import dayjs from "@calcom/dayjs";
 import { getUsernameList } from "@calcom/lib/defaultEvents";
 import { trpc } from "@calcom/trpc/react";
@@ -15,6 +17,7 @@ type UseScheduleWithCacheArgs = {
   dayCount?: number | null;
   rescheduleUid?: string | null;
   isTeamEvent?: boolean;
+  shouldRetrigger?: boolean;
 };
 
 export const useSchedule = ({
@@ -30,6 +33,7 @@ export const useSchedule = ({
   dayCount,
   rescheduleUid,
   isTeamEvent,
+  shouldRetrigger,
 }: UseScheduleWithCacheArgs) => {
   const now = dayjs();
   const monthDayjs = month ? dayjs(month) : now;
@@ -56,7 +60,7 @@ export const useSchedule = ({
     endTime = (prefetchNextMonth ? nextMonthDayjs : monthDayjs).endOf("month").toISOString();
   }
 
-  return trpc.viewer.public.slots.getSchedule.useQuery(
+  const query = trpc.viewer.public.slots.getSchedule.useQuery(
     {
       isTeamEvent,
       usernameList: getUsernameList(username ?? ""),
@@ -88,4 +92,12 @@ export const useSchedule = ({
         (Boolean(eventSlug) || Boolean(eventId) || eventId === 0),
     }
   );
+
+  useEffect(() => {
+    if (shouldRetrigger) {
+      query.refetch();
+    }
+  }, [shouldRetrigger, query]);
+
+  return query;
 };

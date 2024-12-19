@@ -123,6 +123,7 @@ export const BookerWebWrapper = (props: BookerWebWrapperAtomProps) => {
     month: props.month,
     duration: props.duration,
     selectedDate,
+    shouldRetrigger: bookings.errors.hasDataErrors,
   });
 
   const verifyCode = useVerifyCode({

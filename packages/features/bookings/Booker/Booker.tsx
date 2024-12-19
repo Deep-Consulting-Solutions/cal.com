@@ -136,7 +136,7 @@ const BookerComponent = ({
 
   const { bookerFormErrorRef, key, formEmail, bookingForm, errors: formErrors } = bookerForm;
 
-  const { handleBookEvent, errors, loadingStates, expiryTime } = bookings;
+  const { handleBookEvent, errors, loadingStates, expiryTime, resetMutation } = bookings;
 
   const {
     isEmailVerificationModalVisible,
@@ -170,6 +170,7 @@ const BookerComponent = ({
       setSelectedTimeslot(null);
       setBookerState("selecting_date");
     }
+    resetMutation();
   }, [
     bookerState,
     setSelectedTimeslot,
@@ -177,6 +178,7 @@ const BookerComponent = ({
     setBookerState,
     setSeatedEventData,
     seatedEventData,
+    resetMutation,
   ]);
 
   useEffect(() => {

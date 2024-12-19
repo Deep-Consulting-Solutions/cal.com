@@ -52,6 +52,7 @@ export const useScheduleForEvent = ({
   monthCount,
   dayCount,
   selectedDate,
+  shouldRetrigger,
 }: {
   prefetchNextMonth?: boolean;
   username?: string | null;
@@ -62,6 +63,7 @@ export const useScheduleForEvent = ({
   monthCount?: number;
   dayCount?: number | null;
   selectedDate?: string | null;
+  shouldRetrigger?: boolean;
 } = {}) => {
   const { timezone } = useTimePreferences();
   const event = useEvent();
@@ -89,5 +91,6 @@ export const useScheduleForEvent = ({
     month: monthFromStore ?? month,
     duration: durationFromStore ?? duration,
     isTeamEvent: pathname?.indexOf("/team/") !== -1 || isTeam,
+    shouldRetrigger,
   });
 };
