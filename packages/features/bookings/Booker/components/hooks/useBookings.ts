@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 
 import { createPaymentLink } from "@calcom/app-store/stripepayment/lib/client";
 import dayjs from "@calcom/dayjs";
@@ -292,6 +292,12 @@ export const useBookings = ({ event, hashedLink, bookingForm, metadata }: IUseBo
       createInstantBookingMutation.error,
   };
 
+  const resetMutation = useCallback(() => {
+    createBookingMutation.reset();
+    createRecurringBookingMutation.reset();
+    createInstantBookingMutation.reset();
+  }, [createBookingMutation, createRecurringBookingMutation, createInstantBookingMutation]);
+
   // A redirect is triggered on mutation success, so keep the loading state while it is happening.
   const loadingStates = {
     creatingBooking: createBookingMutation.isPending || createBookingMutation.isSuccess,
@@ -301,11 +307,12 @@ export const useBookings = ({ event, hashedLink, bookingForm, metadata }: IUseBo
   };
 
   return {
-    handleBookEvent,
     expiryTime: instantMeetingTokenExpiryTime,
     bookingForm,
     bookerFormErrorRef,
     errors,
     loadingStates,
+    resetMutation,
+    handleBookEvent,
   };
 };
