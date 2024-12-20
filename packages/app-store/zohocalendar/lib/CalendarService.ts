@@ -26,6 +26,15 @@ const zohoKeysSchema = z.object({
   client_secret: z.string(),
 });
 
+const delay500millisecs = async () => {
+  await new Promise((resolve, reject) => {
+    setTimeout(()=>{
+      resolve(true);
+    }, 500)
+  })
+  return;
+}
+
 export default class ZohoCalendarService implements Calendar {
   private integrationName = "";
   private log: typeof logger;
@@ -187,9 +196,17 @@ export default class ZohoCalendarService implements Calendar {
         eventdata: JSON.stringify(this.translateEvent(event)),
       });
 
-      const eventResponse = await this.fetcher(`calendars/${calendarId}/events?${query}`, {
-        method: "POST",
-      });
+      let eventResponse: any
+      try {
+        eventResponse = await this.fetcher(`calendars/${calendarId}/events?${query}`, {
+          method: "POST",
+        });   
+      } catch (error) {
+        await delay500millisecs();
+        eventResponse = await this.fetcher(`calendars/${calendarId}/events?${query}`, {
+          method: "POST",
+        });    
+      }
       eventRespData = await this.handleData(eventResponse, this.log);
       eventId = eventRespData.events[0].uid as string;
     } catch (error) {
@@ -240,9 +257,17 @@ export default class ZohoCalendarService implements Calendar {
         }),
       });
 
-      const eventResponse = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
-        method: "PUT",
-      });
+      let eventResponse;
+      try {
+        eventResponse = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
+          method: "PUT",
+        });
+      } catch (error) {
+        await delay500millisecs();
+        eventResponse = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
+          method: "PUT",
+        });
+      }
       eventRespData = await this.handleData(eventResponse, this.log);
     } catch (error) {
       this.log.error(error);
@@ -292,12 +317,24 @@ export default class ZohoCalendarService implements Calendar {
         }),
       });
 
-      const response = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
-        method: "DELETE",
-        headers: {
-          etag: existingEventData.events[0].etag,
-        },
-      });
+      let response: any;
+      try {
+        response = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
+          method: "DELETE",
+          headers: {
+            etag: existingEventData.events[0].etag,
+          },
+        });
+      } catch (error) {
+        await delay500millisecs();
+        response = await this.fetcher(`calendars/${calendarId}/events/${uid}?${query}`, {
+          method: "DELETE",
+          headers: {
+            etag: existingEventData.events[0].etag,
+          },
+        });
+      }
+
       await this.handleData(response, this.log);
     } catch (error) {
       this.log.error(error);
