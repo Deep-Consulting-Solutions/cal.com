@@ -899,9 +899,9 @@ const clearResponseStoreInRedis = async () => {
 }
 
 setTimeout(()=>{
-  if(!(process.env.DO_NOT_INIT_RESPONSE_STORE === 'true')){
-    initResponseStore();
+  if(process.env.DELETE_RESPONSE_STORE_IN_REDIS === 'true'){
+    clearResponseStoreInRedis(); 
   } else {
-    clearResponseStoreInRedis();
+    initResponseStore();
   }
 }, 0)
