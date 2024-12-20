@@ -31,7 +31,7 @@ import { TRPCError } from "@trpc/server";
 import type { GetScheduleOptions } from "./getSchedule.handler";
 import type { TGetScheduleInputSchema } from "./getSchedule.schema";
 import { redis } from "../../../../../esa/lib/redis";
-import { freeBusyStore, responseStore } from "../../../../../esa/store/store";
+import { freeBusyStore, responseStore, ResponseStoreKeyData } from "../../../../../esa/store/store";
 
 
 export const checkIfIsAvailable = ({
@@ -864,7 +864,30 @@ const initResponseStore = async () => {
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataInStore = await redis.get(getAvailableSlotsCacheKey);
           if(dataInStore){
-            responseStore[getAvailableSlotsCacheKey] = parse(dataInStore);
+            const responseStoreOldData = (parse(dataInStore)) as ResponseStoreKeyData;
+            await getAvailableSlots(responseStoreOldData, true);
+          }
+        })
+      );
+    }
+  } catch (error) {
+    // TODO_ESA: Add incident reporting here when cache refresh fails
+    console.log(`error in initResponseStore`, error);
+  } 
+}
+
+
+const clearResponseStoreInRedis = async () => {
+  try {
+    const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
+
+    const batchedKeysArr = chunk(allKeys, 10);
+    for (const batchedKeys of batchedKeysArr) {
+      await Promise.all(
+        batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
+          const dataInStore = await redis.get(getAvailableSlotsCacheKey);
+          if(dataInStore){
+            await redis.del(getAvailableSlotsCacheKey);
           }
         })
       );
@@ -876,7 +899,9 @@ const initResponseStore = async () => {
 }
 
 setTimeout(()=>{
-  if(!(process.env.DO_NOT_INIT_RESPONSE_STORE === 'true')){
-    initResponseStore()
+  if(process.env.DELETE_RESPONSE_STORE_IN_REDIS === 'true'){
+    clearResponseStoreInRedis(); 
+  } else {
+    initResponseStore();
   }
 }, 0)

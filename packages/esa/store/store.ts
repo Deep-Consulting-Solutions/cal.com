@@ -24,16 +24,18 @@ interface FreeBusyStore {
     }
 }
 
+export interface ResponseStoreKeyData {
+    response: any;
+    userIDs: number[];
+    input: any; 
+    ctx: any;
+    dateFrom: string;
+    dateTo: string;
+    eventTypeSlug: string;
+}
+
 interface ResponseStore {
-    [responseKey: string]: {
-        response: any;
-        userIDs: number[];
-        input: any; 
-        ctx: any;
-        dateFrom: string;
-        dateTo: string;
-        eventTypeSlug: string;
-    }
+    [responseKey: string]: ResponseStoreKeyData
 }
 
 export let freeBusyStore: FreeBusyStore = {};
