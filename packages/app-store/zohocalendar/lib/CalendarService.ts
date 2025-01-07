@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import moment from "moment";
 import { stringify } from "querystring";
 import { z } from "zod";
@@ -15,11 +16,12 @@ import type {
 } from "@calcom/types/Calendar";
 import type { CredentialPayload } from "@calcom/types/Credential";
 
+import { zohoClient } from "../../../esa/lib/zoho";
+// import { redis } from "../../../esa/lib/redis";
+import type { FreeBusyResponse } from "../../../esa/store/store";
+import { freeBusyStore, userInfoStore } from "../../../esa/store/store";
 import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import type { ZohoAuthCredentials, FreeBusy, ZohoCalendarListResp } from "../types/ZohoCalendar";
-import { zohoClient } from '../../../esa/lib/zoho';
-// import { redis } from "../../../esa/lib/redis";
-import { freeBusyStore, userInfoStore, FreeBusyResponse } from "../../../esa/store/store";
 
 const zohoKeysSchema = z.object({
   client_id: z.string(),
@@ -28,12 +30,12 @@ const zohoKeysSchema = z.object({
 
 const delay500millisecs = async () => {
   await new Promise((resolve, reject) => {
-    setTimeout(()=>{
+    setTimeout(() => {
       resolve(true);
-    }, 500)
-  })
+    }, 500);
+  });
   return;
-}
+};
 
 export default class ZohoCalendarService implements Calendar {
   private integrationName = "";
@@ -105,22 +107,25 @@ export default class ZohoCalendarService implements Calendar {
   private fetcher = async (endpoint: string, init?: RequestInit | undefined) => {
     const credentials = await this.auth.getToken();
 
-    return await zohoClient().calendar().passRequestAsProxy({
-      method: "GET" as any,
-      url: endpoint,
-      ...(init || {}),
-      headers: {
-        Authorization: `Bearer ${credentials.access_token}`,
-        "Content-Type": "application/json",
-        ...init?.headers,
-      } as any,
-      data: {},
-      params: {},
-    })
+    return await zohoClient()
+      .calendar()
+      .passRequestAsProxy({
+        method: "GET" as any,
+        url: endpoint,
+        ...(init || {}),
+        headers: {
+          Authorization: `Bearer ${credentials.access_token}`,
+          "Content-Type": "application/json",
+          "x-esa-request-source": "cal",
+          ...init?.headers,
+        } as any,
+        data: {},
+        params: {},
+      });
   };
 
   private getUserInfo = async (calendarID: string) => {
-    // Swap this to use zoho utils as 
+    // Swap this to use zoho utils as
     // const response = await fetch(`https://accounts.zoho.com/oauth/user/info`, {
     //   method: "GET",
     //   headers: {
@@ -131,20 +136,22 @@ export default class ZohoCalendarService implements Calendar {
 
     let response: any = userInfoStore[calendarID];
 
-    if(!response){
+    if (!response) {
       const credentials = await this.auth.getToken();
-      response = await zohoClient().calendar().passRequestAsProxy({
-        method: "GET" as any,
-        url: `https://accounts.zoho.com/oauth/user/info`,
-        headers: {
-          Authorization: `Bearer ${credentials.access_token}`,
-          "Content-Type": "application/json",
-          ignoreBaseUrl: true,
-        } as any,
-        data: {},
-        params: {},
-      })
-      
+      response = await zohoClient()
+        .calendar()
+        .passRequestAsProxy({
+          method: "GET" as any,
+          url: `https://accounts.zoho.com/oauth/user/info`,
+          headers: {
+            Authorization: `Bearer ${credentials.access_token}`,
+            "Content-Type": "application/json",
+            ignoreBaseUrl: true,
+          } as any,
+          data: {},
+          params: {},
+        });
+
       userInfoStore[calendarID] = response;
     }
 
@@ -154,31 +161,29 @@ export default class ZohoCalendarService implements Calendar {
   private hasZohoFreeBusyDataChanged = (currentDatarr: FreeBusyResponse, newDatarr: FreeBusyResponse) => {
     const oldData = currentDatarr;
     const newdata = newDatarr;
-  
-    if (oldData.freebusy.length === 0 && newdata.freebusy.length !== 0){
+
+    if (oldData.freebusy.length === 0 && newdata.freebusy.length !== 0) {
       return true;
     }
-  
-    if (newdata.freebusy.length === 0 && oldData.freebusy.length !== 0){
+
+    if (newdata.freebusy.length === 0 && oldData.freebusy.length !== 0) {
       return true;
     }
-  
+
     const allDatainNewIsInOld = newdata.freebusy.every((newBusySlot) => {
       return !!oldData.freebusy.find(
         (oldBusySlot) =>
-          newBusySlot.startTime === oldBusySlot.startTime &&
-          newBusySlot.endTime === oldBusySlot.endTime
+          newBusySlot.startTime === oldBusySlot.startTime && newBusySlot.endTime === oldBusySlot.endTime
       );
     });
-  
+
     const allDatainOldIsInNew = oldData.freebusy.every((oldBusySlot) => {
       return !!newdata.freebusy.find(
         (newBusySlot) =>
-          oldBusySlot.startTime === newBusySlot.startTime &&
-          oldBusySlot.endTime === newBusySlot.endTime
+          oldBusySlot.startTime === newBusySlot.startTime && oldBusySlot.endTime === newBusySlot.endTime
       );
     });
-  
+
     return !(allDatainNewIsInOld && allDatainOldIsInNew);
   };
 
@@ -196,16 +201,16 @@ export default class ZohoCalendarService implements Calendar {
         eventdata: JSON.stringify(this.translateEvent(event)),
       });
 
-      let eventResponse: any
+      let eventResponse: any;
       try {
         eventResponse = await this.fetcher(`calendars/${calendarId}/events?${query}`, {
           method: "POST",
-        });   
+        });
       } catch (error) {
         await delay500millisecs();
         eventResponse = await this.fetcher(`calendars/${calendarId}/events?${query}`, {
           method: "POST",
-        });    
+        });
       }
       eventRespData = await this.handleData(eventResponse, this.log);
       eventId = eventRespData.events[0].uid as string;
@@ -342,13 +347,17 @@ export default class ZohoCalendarService implements Calendar {
     }
   }
 
-  private async getBusyData(dateFrom: string, dateTo: string, userEmail: string, additionalData: {
-    itegrationCalendars: IntegrationCalendar[];
-    defaultDateFrom: string;
-    defaultDateTo: string;
-  },
-  skipCache: boolean
-) {
+  private async getBusyData(
+    dateFrom: string,
+    dateTo: string,
+    userEmail: string,
+    additionalData: {
+      itegrationCalendars: IntegrationCalendar[];
+      defaultDateFrom: string;
+      defaultDateTo: string;
+    },
+    skipCache: boolean
+  ) {
     const query = stringify({
       sdate: dateFrom,
       edate: dateTo,
@@ -356,12 +365,14 @@ export default class ZohoCalendarService implements Calendar {
       uemail: userEmail,
     });
 
-    const callUserID = this.calUserID || '';
+    const callUserID = this.calUserID || "";
     // TODO_ESA____ Fix busyDataKey, part of it in the date after the T is too specific
-    const busyDataKey = `${dateFrom.split('T')[0]}_${dateTo.split('T')[0]}_${userEmail}`;
-    const freeBusyUserDataAtKey  = !!freeBusyStore[callUserID]? freeBusyStore[callUserID][busyDataKey]: undefined;
-    let response = !!freeBusyUserDataAtKey? freeBusyUserDataAtKey.response : undefined;
-    if(!response || (!!response && skipCache)){
+    const busyDataKey = `${dateFrom.split("T")[0]}_${dateTo.split("T")[0]}_${userEmail}`;
+    const freeBusyUserDataAtKey = !!freeBusyStore[callUserID]
+      ? freeBusyStore[callUserID][busyDataKey]
+      : undefined;
+    let response = !!freeBusyUserDataAtKey ? freeBusyUserDataAtKey.response : undefined;
+    if (!response || (!!response && skipCache)) {
       // const cachedResponse = await redis.get(busyDataKey);
       // if(cachedResponse){
       //   response = JSON.parse(cachedResponse);
@@ -372,19 +383,22 @@ export default class ZohoCalendarService implements Calendar {
         method: "GET",
       })) as FreeBusyResponse;
       const now = dayjs();
-      
-      if(!!freeBusyStore[callUserID]){
-        if(!!freeBusyStore[callUserID][busyDataKey]){
+
+      if (!!freeBusyStore[callUserID]) {
+        if (!!freeBusyStore[callUserID][busyDataKey]) {
           // case when the data already exists, we will need to compare with existing data
           freeBusyStore[callUserID][busyDataKey] = {
-            changed: this.hasZohoFreeBusyDataChanged(freeBusyStore[callUserID][busyDataKey].response, response),
+            changed: this.hasZohoFreeBusyDataChanged(
+              freeBusyStore[callUserID][busyDataKey].response,
+              response
+            ),
             credential: this.credential,
             dateFrom: additionalData.defaultDateFrom,
             dateTo: additionalData.defaultDateTo,
             integrationCalendars: additionalData.itegrationCalendars,
             lastUpdatedAt: now,
             response: response,
-          }
+          };
         } else {
           freeBusyStore[callUserID][busyDataKey] = {
             changed: false,
@@ -394,7 +408,7 @@ export default class ZohoCalendarService implements Calendar {
             integrationCalendars: additionalData.itegrationCalendars,
             lastUpdatedAt: now,
             response: response,
-          }
+          };
         }
       } else {
         freeBusyStore[callUserID] = {};
@@ -406,18 +420,17 @@ export default class ZohoCalendarService implements Calendar {
           integrationCalendars: additionalData.itegrationCalendars,
           lastUpdatedAt: now,
           response: response,
-        }
-
+        };
       }
       // await redis.setex(busyDataKey, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 15), JSON.stringify(response));
       // }
     }
 
-    let data: any
+    let data: any;
     try {
       data = await this.handleData(response, this.log);
     } catch (error) {
-      console.log(JSON.stringify({thegetBusyDataErrorrrrr: error}))
+      console.log(JSON.stringify({ thegetBusyDataErrorrrrr: error }));
       throw error;
     }
 
@@ -431,8 +444,7 @@ export default class ZohoCalendarService implements Calendar {
           start: moment.utc(freebusy.startTime, "YYYYMMDDTHHmmssZ").toISOString(),
           end: moment.utc(freebusy.endTime, "YYYYMMDDTHHmmssZ").toISOString(),
         })) || []
-    )
-    
+    );
   }
 
   async getAvailability(
@@ -577,7 +589,7 @@ export default class ZohoCalendarService implements Calendar {
   }
 
   async handleData(response: any, log: typeof logger) {
-    console.log('handleDataInput', JSON.stringify(response));
+    console.log("handleDataInput", JSON.stringify(response));
     if (response.status >= 300 && response.status <= 199) {
       log.debug("zoho request with data", response);
       throw response;
@@ -615,41 +627,43 @@ export default class ZohoCalendarService implements Calendar {
   };
 }
 
-
 const refreshZohoFreeBusyData = async () => {
   try {
-    await Promise.all(Object.entries(freeBusyStore).map(async ([userID, avaiabilityDataSet]) => {
-      const usersAvailabilityEntries = Object.entries(avaiabilityDataSet);
-      if(!usersAvailabilityEntries.length) return;
-      const credential: CredentialPayload = avaiabilityDataSet[usersAvailabilityEntries[0][0]].credential;
-      const usersZohoCalendarService = new ZohoCalendarService(credential);
-      // For each availability key cached from zoho update the cache setting changed to true where a change has occurred so 
-      for (const [availabilityKey, {dateFrom, dateTo, integrationCalendars}] of usersAvailabilityEntries){
-        // if dateTo is in the past delete the key else continue
-        const availabilityPeriodIsInPast = dayjs().add(1, 'day').isAfter(dayjs(dateTo), 'millisecond');
+    await Promise.all(
+      Object.entries(freeBusyStore).map(async ([userID, avaiabilityDataSet]) => {
+        const usersAvailabilityEntries = Object.entries(avaiabilityDataSet);
+        if (!usersAvailabilityEntries.length) return;
+        const credential: CredentialPayload = avaiabilityDataSet[usersAvailabilityEntries[0][0]].credential;
+        const usersZohoCalendarService = new ZohoCalendarService(credential);
+        // For each availability key cached from zoho update the cache setting changed to true where a change has occurred so
+        for (const [
+          availabilityKey,
+          { dateFrom, dateTo, integrationCalendars },
+        ] of usersAvailabilityEntries) {
+          // if dateTo is in the past delete the key else continue
+          const availabilityPeriodIsInPast = dayjs().add(1, "day").isAfter(dayjs(dateTo), "millisecond");
 
-        if(!availabilityPeriodIsInPast) {
-          // check if the availability data was updated within the last 6 seconds and skip if it has been
-          const latestUpdateTime = freeBusyStore[userID][availabilityKey].lastUpdatedAt;
-          const past6SecondTime = dayjs().subtract(6, "second");
-          const isUpdatedInLast6seconds = latestUpdateTime.isAfter(past6SecondTime, 'millisecond');
-          if(!isUpdatedInLast6seconds){
-            await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
-            // add a small delay after each update of availability so the 2 following each other are not perceived as concurrent
+          if (!availabilityPeriodIsInPast) {
+            // check if the availability data was updated within the last 6 seconds and skip if it has been
+            const latestUpdateTime = freeBusyStore[userID][availabilityKey].lastUpdatedAt;
+            const past6SecondTime = dayjs().subtract(6, "second");
+            const isUpdatedInLast6seconds = latestUpdateTime.isAfter(past6SecondTime, "millisecond");
+            if (!isUpdatedInLast6seconds) {
+              await usersZohoCalendarService.getAvailability(dateFrom, dateTo, integrationCalendars, true);
+              // add a small delay after each update of availability so the 2 following each other are not perceived as concurrent
+            }
+          } else {
+            delete freeBusyStore[userID][availabilityKey];
           }
-        } else {
-          delete freeBusyStore[userID][availabilityKey];
         }
-      }
-    }))
+      })
+    );
   } catch (error) {
     // ESA_TODO: add incident reporting
     console.log(`Error refreshing free busy data on zoho`, error);
   }
-}
+};
 
-
-
-setInterval(()=>{
+setInterval(() => {
   refreshZohoFreeBusyData();
-}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 20*1000))
+}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 20 * 1000));
