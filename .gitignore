@@ -99,3 +99,4 @@ apps/auth
 
 # Misc
 buildscript.sh
+xtests.js
