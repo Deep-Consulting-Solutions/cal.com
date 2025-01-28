@@ -384,22 +384,38 @@ export default class ZohoCalendarService implements Calendar {
       })) as FreeBusyResponse;
       const now = dayjs();
 
-      if (!!freeBusyStore[callUserID]) {
-        if (!!freeBusyStore[callUserID][busyDataKey]) {
-          // case when the data already exists, we will need to compare with existing data
-          freeBusyStore[callUserID][busyDataKey] = {
-            changed: this.hasZohoFreeBusyDataChanged(
-              freeBusyStore[callUserID][busyDataKey].response,
-              response
-            ),
-            credential: this.credential,
-            dateFrom: additionalData.defaultDateFrom,
-            dateTo: additionalData.defaultDateTo,
-            integrationCalendars: additionalData.itegrationCalendars,
-            lastUpdatedAt: now,
-            response: response,
-          };
+      const _3monthsFromNow = moment().add(3, "months");
+      const ignoreCaching = moment(dateFrom).isSameOrAfter(_3monthsFromNow);
+
+      if (!ignoreCaching) {
+        if (!!freeBusyStore[callUserID]) {
+          if (!!freeBusyStore[callUserID][busyDataKey]) {
+            // case when the data already exists, we will need to compare with existing data
+            freeBusyStore[callUserID][busyDataKey] = {
+              changed: this.hasZohoFreeBusyDataChanged(
+                freeBusyStore[callUserID][busyDataKey].response,
+                response
+              ),
+              credential: this.credential,
+              dateFrom: additionalData.defaultDateFrom,
+              dateTo: additionalData.defaultDateTo,
+              integrationCalendars: additionalData.itegrationCalendars,
+              lastUpdatedAt: now,
+              response: response,
+            };
+          } else {
+            freeBusyStore[callUserID][busyDataKey] = {
+              changed: false,
+              credential: this.credential,
+              dateFrom: additionalData.defaultDateFrom,
+              dateTo: additionalData.defaultDateTo,
+              integrationCalendars: additionalData.itegrationCalendars,
+              lastUpdatedAt: now,
+              response: response,
+            };
+          }
         } else {
+          freeBusyStore[callUserID] = {};
           freeBusyStore[callUserID][busyDataKey] = {
             changed: false,
             credential: this.credential,
@@ -410,20 +426,9 @@ export default class ZohoCalendarService implements Calendar {
             response: response,
           };
         }
-      } else {
-        freeBusyStore[callUserID] = {};
-        freeBusyStore[callUserID][busyDataKey] = {
-          changed: false,
-          credential: this.credential,
-          dateFrom: additionalData.defaultDateFrom,
-          dateTo: additionalData.defaultDateTo,
-          integrationCalendars: additionalData.itegrationCalendars,
-          lastUpdatedAt: now,
-          response: response,
-        };
+        // await redis.setex(busyDataKey, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 15), JSON.stringify(response));
+        // }
       }
-      // await redis.setex(busyDataKey, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 15), JSON.stringify(response));
-      // }
     }
 
     let data: any;
