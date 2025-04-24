@@ -9,7 +9,6 @@
       "@lib/*": ["lib/*"],
       "@server/*": ["server/*"],
       "@prisma/client/*": ["@calcom/prisma/client/*"],
-      "@calcom/api/*": ["../api/*"]
     },
     "plugins": [
       {
