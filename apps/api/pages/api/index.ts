@@ -6,7 +6,6 @@ export { default as availabilities } from "./availabilities";
 export { default as availability } from "./availability";
 export { default as bookingReferences } from "./booking-references";
 export { default as bookings } from "./bookings";
-export { default as schedules } from "./schedules";
 export { default as slots } from "./slots";
 export { default as teams } from "./teams";
 
