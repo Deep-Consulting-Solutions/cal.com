@@ -185,6 +185,7 @@ const nextConfig = {
     "@calcom/trpc",
     "@calcom/ui",
     "@esa/cal-additions",
+    "@esa/cal-api",
     "lucide-react",
   ],
   modularizeImports: {
