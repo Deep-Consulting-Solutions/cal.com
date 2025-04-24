@@ -3109,7 +3109,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@calcom/api@workspace:apps/api":
+"@calcom/api@workspace:*, @calcom/api@workspace:apps/api":
   version: 0.0.0-use.local
   resolution: "@calcom/api@workspace:apps/api"
   dependencies:
