@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@boxyhq/saml-jackson": "1.18.6",
+    "@calcom/api": "workspace:*",
     "@calcom/app-store": "*",
     "@calcom/app-store-cli": "*",
     "@calcom/core": "*",
@@ -40,7 +41,6 @@
     "@calcom/ui": "*",
     "@daily-co/daily-js": "^0.37.0",
     "@esa/cal-additions": "*",
-    "@calcom/api": "*",
     "@formkit/auto-animate": "1.0.0-beta.5",
     "@glidejs/glide": "^3.5.2",
     "@hookform/error-message": "^2.0.0",
