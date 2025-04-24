@@ -1,6 +1,6 @@
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from "next";
 
-import * as calApiHandlers from "../../../../api/pages/api";
+import * as calApiHandlers from "@esa/cal-api/api";
 
 const kebabToCamel = (s: string) => s.replace(/-./g, (x) => x[1].toUpperCase());
 

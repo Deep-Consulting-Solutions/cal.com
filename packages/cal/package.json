@@ -1,0 +1,11 @@
+{
+  "name": "@esa/cal-api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "types": "index.d.ts",
+  "dependencies": {
+    "@calcom/prisma": "*",
+    "next-api-middleware": "^1.0.1"
+  }
+}
