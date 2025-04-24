@@ -4308,6 +4308,7 @@ __metadata:
     next-i18next: ^13.2.2
     next-seo: ^6.0.0
     next-themes: ^0.2.0
+    next-validations: ^1.0.3
     node-html-parser: ^6.1.10
     node-mocks-http: ^1.11.0
     nodemailer: ^6.7.8
@@ -13113,6 +13114,86 @@ __metadata:
   version: 1.9.2
   resolution: "@types/yoga-layout@npm:1.9.2"
   checksum: dbc3d6ab997d50fe1fcca5dd6822982c8fe586145ab648e0e97c3bc4ebc93d0b40c9edd75febaba374d61f60c1379b639f6be652965c776a901bf1068f2eac87
+  languageName: node
+  linkType: hard
+
+"@typeschema/core@npm:0.14.0":
+  version: 0.14.0
+  resolution: "@typeschema/core@npm:0.14.0"
+  peerDependencies:
+    "@types/json-schema": ^7.0.15
+  peerDependenciesMeta:
+    "@types/json-schema":
+      optional: true
+  checksum: 201ad498f5d806a6aaf139c86c491577883be81805f843fc91a4e9b4f174b3de303714c2e12f0a6a7cf3ac9aa8b160ae929f176897a92f61d7ddd0609291ee8e
+  languageName: node
+  linkType: hard
+
+"@typeschema/main@npm:0.14.1":
+  version: 0.14.1
+  resolution: "@typeschema/main@npm:0.14.1"
+  dependencies:
+    "@typeschema/core": 0.14.0
+  peerDependencies:
+    "@typeschema/arktype": 0.14.0
+    "@typeschema/class-validator": 0.3.0
+    "@typeschema/deepkit": 0.14.0
+    "@typeschema/effect": 0.14.0
+    "@typeschema/fastest-validator": 0.2.0
+    "@typeschema/function": 0.14.0
+    "@typeschema/io-ts": 0.14.0
+    "@typeschema/joi": 0.14.0
+    "@typeschema/json": 0.14.0
+    "@typeschema/ow": 0.14.0
+    "@typeschema/runtypes": 0.14.0
+    "@typeschema/superstruct": 0.14.0
+    "@typeschema/suretype": 0.2.0
+    "@typeschema/typebox": 0.14.0
+    "@typeschema/valibot": 0.14.0
+    "@typeschema/valita": 0.2.0
+    "@typeschema/vine": 0.2.0
+    "@typeschema/yup": 0.14.0
+    "@typeschema/zod": 0.14.0
+  peerDependenciesMeta:
+    "@typeschema/arktype":
+      optional: true
+    "@typeschema/class-validator":
+      optional: true
+    "@typeschema/deepkit":
+      optional: true
+    "@typeschema/effect":
+      optional: true
+    "@typeschema/fastest-validator":
+      optional: true
+    "@typeschema/function":
+      optional: true
+    "@typeschema/io-ts":
+      optional: true
+    "@typeschema/joi":
+      optional: true
+    "@typeschema/json":
+      optional: true
+    "@typeschema/ow":
+      optional: true
+    "@typeschema/runtypes":
+      optional: true
+    "@typeschema/superstruct":
+      optional: true
+    "@typeschema/suretype":
+      optional: true
+    "@typeschema/typebox":
+      optional: true
+    "@typeschema/valibot":
+      optional: true
+    "@typeschema/valita":
+      optional: true
+    "@typeschema/vine":
+      optional: true
+    "@typeschema/yup":
+      optional: true
+    "@typeschema/zod":
+      optional: true
+  checksum: ab0676f877883b0cbad4b3d3bffa769e462bc12fc7ff1adc50e1905e8467719f19100aa10025c92e8848ffe7f3fff756110ff3a7daaa3d3a738d63cce76cc79c
   languageName: node
   linkType: hard
 
@@ -26487,6 +26568,17 @@ __metadata:
   peerDependencies:
     next: "*"
   checksum: f0af51cd0e07e5ece3353b290f36c36f859436b465071a0765cc0dcea630ecccaaa217cf992e174b9f357a6ca24ea65c85084bb0c4bc2029d4b2ac93c1a66ca2
+  languageName: node
+  linkType: hard
+
+"next-validations@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "next-validations@npm:1.0.3"
+  dependencies:
+    "@typeschema/main": 0.14.1
+  peerDependencies:
+    next: "*"
+  checksum: 3781a9206c802e160ed72fc9e7814650749dd147dc9a22dd3a3686b9038e38578188b2db6e0eb5bb5884ada8ea1960825cb9b1cb2e57f5e72231d6116864a096
   languageName: node
   linkType: hard
 

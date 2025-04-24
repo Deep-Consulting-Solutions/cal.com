@@ -100,6 +100,7 @@
     "next-i18next": "^13.2.2",
     "next-seo": "^6.0.0",
     "next-themes": "^0.2.0",
+    "next-validations": "^1.0.3",
     "nodemailer": "^6.7.8",
     "otplib": "^12.0.1",
     "qrcode": "^1.5.1",
