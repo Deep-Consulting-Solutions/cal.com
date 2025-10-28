@@ -42,7 +42,9 @@ export const freeBusyStore: FreeBusyStore = {};
 export let userInfoStore: { [key: string]: any } = {};
 export const responseStore: ResponseStore = {};
 
-// Reset the user info store hourly
-setInterval(() => {
-  userInfoStore = {};
-}, Number(3600 * 1000));
+// Reset the user info store hourly (skip if caching is disabled)
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
+  setInterval(() => {
+    userInfoStore = {};
+  }, Number(3600 * 1000));
+}

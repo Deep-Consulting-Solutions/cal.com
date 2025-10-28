@@ -134,7 +134,10 @@ export default class ZohoCalendarService implements Calendar {
     //   },
     // });
 
-    let response: any = userInfoStore[calendarID];
+    // Skip cache if caching is disabled
+    const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true';
+
+    let response: any = !isCacheDisabled ? userInfoStore[calendarID] : undefined;
 
     if (!response) {
       const credentials = await this.auth.getToken();
@@ -152,7 +155,10 @@ export default class ZohoCalendarService implements Calendar {
           params: {},
         });
 
-      userInfoStore[calendarID] = response;
+      // Only store in cache if caching is not disabled
+      if (!isCacheDisabled) {
+        userInfoStore[calendarID] = response;
+      }
     }
 
     return this.handleData(response, this.log);
@@ -368,7 +374,11 @@ export default class ZohoCalendarService implements Calendar {
     const callUserID = this.calUserID || "";
     // TODO_ESA____ Fix busyDataKey, part of it in the date after the T is too specific
     const busyDataKey = `${dateFrom.split("T")[0]}_${dateTo.split("T")[0]}_${userEmail}`;
-    const freeBusyUserDataAtKey = !!freeBusyStore[callUserID]
+
+    // Skip cache if caching is disabled
+    const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true';
+
+    const freeBusyUserDataAtKey = !isCacheDisabled && !!freeBusyStore[callUserID]
       ? freeBusyStore[callUserID][busyDataKey]
       : undefined;
     let response = !!freeBusyUserDataAtKey ? freeBusyUserDataAtKey.response : undefined;
@@ -387,7 +397,8 @@ export default class ZohoCalendarService implements Calendar {
       const _3monthsFromNow = moment().add(3, "months");
       const ignoreCaching = moment(dateFrom).isSameOrAfter(_3monthsFromNow);
 
-      if (!ignoreCaching) {
+      // Skip storing in cache if caching is disabled
+      if (!isCacheDisabled && !ignoreCaching) {
         if (!!freeBusyStore[callUserID]) {
           if (!!freeBusyStore[callUserID][busyDataKey]) {
             // case when the data already exists, we will need to compare with existing data
@@ -633,6 +644,11 @@ export default class ZohoCalendarService implements Calendar {
 }
 
 const refreshZohoFreeBusyData = async () => {
+  // Skip refresh if caching is disabled
+  if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true') {
+    return;
+  }
+
   try {
     await Promise.all(
       Object.entries(freeBusyStore).map(async ([userID, avaiabilityDataSet]) => {
@@ -669,6 +685,9 @@ const refreshZohoFreeBusyData = async () => {
   }
 };
 
-setInterval(() => {
-  refreshZohoFreeBusyData();
-}, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 20 * 1000));
+// Skip periodic refresh if caching is disabled
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
+  setInterval(() => {
+    refreshZohoFreeBusyData();
+  }, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 20 * 1000));
+}
