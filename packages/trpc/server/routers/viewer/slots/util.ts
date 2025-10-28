@@ -304,8 +304,11 @@ const getAvailableSlotsCacheKeyPrefix = 'getAvailableSlotsCache_';
 export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypassCacheResponse = false) {
   // check the cache for a response with this timezone
   const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${input.eventTypeId || ''}_${input.eventTypeSlug || ''}`;
-  
-  if((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse)){
+
+  // Skip cache read if caching is disabled
+  const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true';
+
+  if(!isCacheDisabled && ((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse))){
     const responseDetails = responseStore[cacheKey];
     if(responseDetails){
       // const responseDetails: any = parse(response);
@@ -673,19 +676,20 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
   );
   loggerWithEventDetails.debug(`Available slots: ${JSON.stringify(computedAvailableSlots)}`);
 
-  if((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true')){
+  // Skip cache write if caching is disabled
+  if(!isCacheDisabled && ((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true'))){
     // store the response for a particular computation, it will then keep refreshing itself until it end date passes
     const responseDataToCache: {
       response: any;
       userIDs: number[];
-      input: any; 
+      input: any;
       ctx: any;
       dateFrom: string;
       dateTo: string;
       eventTypeSlug: string;
   } = {
-      input, 
-      ctx, 
+      input,
+      ctx,
       userIDs: allUserIds,
       response: {
       slots: computedAvailableSlots,
@@ -695,7 +699,7 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
       eventTypeSlug: input.eventTypeSlug || ''
     }
     responseStore[cacheKey] = responseDataToCache;
-    await redis.set(cacheKey, stringify(responseDataToCache)); 
+    await redis.set(cacheKey, stringify(responseDataToCache));
   }
 
   return {
@@ -745,6 +749,11 @@ export const refreshAvailableSlotsCache = async (
   startTime?: string | Date,
   endTime?: string | Date,
 ) => {
+  // Skip all cache refresh operations if caching is disabled
+  if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true') {
+    return;
+  }
+
   try {
     const allKeys = Object.keys(responseStore);
 
@@ -848,9 +857,12 @@ export const refreshAvailableSlotsCache = async (
   } 
 }
 
-setInterval(()=>{
-  refreshAvailableSlotsCache()
-}, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 8*1000))
+// Skip periodic refresh if caching is disabled
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
+  setInterval(()=>{
+    refreshAvailableSlotsCache()
+  }, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 8*1000))
+}
 
 
 
@@ -898,10 +910,13 @@ const clearResponseStoreInRedis = async () => {
   } 
 }
 
-setTimeout(()=>{
-  if(process.env.DELETE_RESPONSE_STORE_IN_REDIS === 'true'){
-    clearResponseStoreInRedis(); 
-  } else {
-    initResponseStore();
-  }
-}, 0)
+// Skip cache initialization if caching is disabled
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
+  setTimeout(()=>{
+    if(process.env.DELETE_RESPONSE_STORE_IN_REDIS === 'true'){
+      clearResponseStoreInRedis();
+    } else {
+      initResponseStore();
+    }
+  }, 0)
+}
