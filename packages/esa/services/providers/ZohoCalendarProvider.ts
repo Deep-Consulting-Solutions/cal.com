@@ -7,7 +7,7 @@ import {
 } from "./types";
 import { zohoClient } from "../../lib/zoho";
 import { getAppKeysFromSlug } from "@calcom/app-store/_utils/getAppKeysFromSlug";
-import { zohoKeysSchema } from "@calcom/app-store/zohocalendar/lib/types";
+import { appKeysSchema as zohoKeysSchema } from "@calcom/app-store/zohocalendar/zod";
 import prisma from "@calcom/prisma";
 import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
 import { MembershipRole } from "@calcom/prisma/enums";

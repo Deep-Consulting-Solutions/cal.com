@@ -1,4 +1,4 @@
-import { sendMail } from "@calcom/emails";
+import { sendMail } from "./mailer";
 import { setupCalendarOauthEmail } from "../emails/setupCalendarOauthEmail";
 
 interface SendCalendarSetupEmailParams {
