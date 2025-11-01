@@ -1,15 +1,15 @@
+import getAppKeysFromSlug from "@calcom/app-store/_utils/getAppKeysFromSlug";
+import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
+import prisma from "@calcom/prisma";
+
+import { sendCalendarSetupEmail } from "../../lib/utils";
 import { BaseCalendarProvider } from "./BaseCalendarProvider";
-import {
+import type {
   CalendarProviderConfig,
   CalendarProviderUser,
   CalendarProviderSchedule,
   ProviderSetupResult,
 } from "./types";
-import { getAppKeysFromSlug } from "@calcom/app-store/_utils/getAppKeysFromSlug";
-import prisma from "@calcom/prisma";
-import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
-import { MembershipRole } from "@calcom/prisma/enums";
-import { sendCalendarSetupEmail } from "../../lib/utils";
 
 interface Office365Keys {
   client_id: string;
@@ -28,20 +28,13 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       clientId: this.getRequiredEnvVar("MICROSOFT_CLIENT_ID"),
       clientSecret: this.getRequiredEnvVar("MICROSOFT_CLIENT_SECRET"),
       redirectUri: `${process.env.WEBAPP_URL}/api/integrations/office365calendar/callback`,
-      scopes: [
-        "User.Read",
-        "Calendars.ReadWrite",
-        "offline_access",
-      ],
+      scopes: ["User.Read", "Calendars.ReadWrite", "offline_access"],
     };
   }
 
   isConfigured(): boolean {
     // Check if Office365 calendar app is configured in Cal.com
-    return !!(
-      this.config.clientId &&
-      this.config.clientSecret
-    );
+    return !!(this.config.clientId && this.config.clientSecret);
   }
 
   getConfigurationError(): string | null {
@@ -70,7 +63,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       },
     });
 
-    return managedSetups.map(setup => ({
+    return managedSetups.map((setup) => ({
       id: setup.id.toString(),
       email: setup.user.email,
       name: setup.user.name || "",
@@ -98,7 +91,8 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       if (!appKeys || !appKeys.client_id || !appKeys.client_secret) {
         return {
           success: false,
-          error: "Microsoft Outlook Calendar app not configured in Cal.com. Please configure the Office365calendar app with valid credentials.",
+          error:
+            "Microsoft Outlook Calendar app not configured in Cal.com. Please configure the Office365calendar app with valid credentials.",
         };
       }
 
@@ -132,7 +126,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
         availability: params.schedule.availability as any,
       };
 
-      const schedule = await prisma.schedule.create({
+      await prisma.schedule.create({
         data: {
           ...scheduleData,
           userId: user.id,
@@ -145,7 +139,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       }
 
       // Create ManagedSchedulingSetup entry
-      const setup = await prisma.managedSchedulingSetup.upsert({
+      await prisma.managedSchedulingSetup.upsert({
         where: {
           userId_provider: {
             userId: user.id,
@@ -279,15 +273,15 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   async generateOAuthUrl(userId: string): Promise<string> {
-    const appKeys = await getAppKeysFromSlug("office365calendar") as Office365Keys;
+    const appKeys = (await getAppKeysFromSlug("office365calendar")) as Office365Keys;
 
     const tenantId = appKeys.tenant_id || "common";
     const params = new URLSearchParams({
       client_id: appKeys.client_id,
       response_type: "code",
-      redirect_uri: this.config.redirectUri!,
+      redirect_uri: this.config.redirectUri || "",
       response_mode: "query",
-      scope: this.config.scopes!.join(" "),
+      scope: (this.config.scopes || []).join(" "),
       state: userId,
     });
 

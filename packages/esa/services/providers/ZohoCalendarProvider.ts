@@ -1,18 +1,17 @@
+import getAppKeysFromSlug from "@calcom/app-store/_utils/getAppKeysFromSlug";
+import { appKeysSchema as zohoKeysSchema } from "@calcom/app-store/zohocalendar/zod";
+import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
+import prisma from "@calcom/prisma";
+
+import { sendZohoCalendarSetupEmail } from "../../lib/utils";
+import { zohoClient } from "../../lib/zoho";
 import { BaseCalendarProvider } from "./BaseCalendarProvider";
-import {
+import type {
   CalendarProviderConfig,
   CalendarProviderUser,
   CalendarProviderSchedule,
   ProviderSetupResult,
 } from "./types";
-import { zohoClient } from "../../lib/zoho";
-import { getAppKeysFromSlug } from "@calcom/app-store/_utils/getAppKeysFromSlug";
-import { appKeysSchema as zohoKeysSchema } from "@calcom/app-store/zohocalendar/zod";
-import prisma from "@calcom/prisma";
-import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
-import { MembershipRole } from "@calcom/prisma/enums";
-import { sendZohoCalendarSetupEmail } from "../../lib/utils";
-import type { SelectedCalendarEventTypePayload } from "@calcom/prisma/zod-utils";
 
 export class ZohoCalendarProvider extends BaseCalendarProvider {
   constructor() {
@@ -46,7 +45,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       "ZOHO_CRM_BASE_URL",
     ];
 
-    const missing = requiredEnvVars.filter(varName => !this.getRequiredEnvVar(varName));
+    const missing = requiredEnvVars.filter((varName) => !this.getRequiredEnvVar(varName));
 
     if (missing.length > 0) {
       return `Zoho Calendar not configured. Missing environment variables: ${missing.join(", ")}`;
@@ -83,9 +82,9 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       },
     });
 
-    const setupMap = new Map(managedSetups.map(setup => [setup.zuid, setup]));
+    const setupMap = new Map(managedSetups.map((setup) => [setup.zuid, setup]));
 
-    return zohoUsers.map(zohoUser => {
+    return (zohoUsers.users || []).map((zohoUser) => {
       const setup = setupMap.get(zohoUser.zuid);
       const hasZohoMail = mailAccounts.includes(zohoUser.email);
 
@@ -119,7 +118,8 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       if (!parsedKeys.success) {
         return {
           success: false,
-          error: "Zoho Calendar app not configured in Cal.com. Please configure the Zohocalendar app with valid credentials.",
+          error:
+            "Zoho Calendar app not configured in Cal.com. Please configure the Zohocalendar app with valid credentials.",
         };
       }
 
@@ -153,7 +153,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
         availability: params.schedule.availability as any,
       };
 
-      const schedule = await prisma.schedule.create({
+      await prisma.schedule.create({
         data: {
           ...scheduleData,
           userId: user.id,
@@ -166,7 +166,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       }
 
       // Create ZohoSchedulingSetup entry
-      const setup = await prisma.zohoSchedulingSetup.upsert({
+      await prisma.zohoSchedulingSetup.upsert({
         where: { zuid: params.userId },
         create: {
           zuid: params.userId,
@@ -291,10 +291,10 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
     const { client_id } = zohoKeysSchema.parse(appKeys);
 
     const params = new URLSearchParams({
-      scope: this.config.scopes!.join(" "),
+      scope: (this.config.scopes || []).join(" "),
       client_id,
       response_type: "code",
-      redirect_uri: this.config.redirectUri!,
+      redirect_uri: this.config.redirectUri || "",
       access_type: "offline",
       state: userId, // Pass zuid as state for callback
     });

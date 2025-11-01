@@ -1,10 +1,13 @@
 export { default as calendarAvailability } from "./calendar-availability";
+export { default as calendarProvidersValidate } from "./calendar-providers/validate";
 export { default as completeZohoCalendarSetup } from "./complete-zoho-calendar-setup";
 export { default as getConnectedCalendars } from "./get-connected-calendars";
 export { default as getConnectedCalendarsFromCrm } from "./get-connected-calendars-from-crm";
+export { default as managedCalendarUsers } from "./managed-calendar-users";
 export { default as managedZohoCrmUsers } from "./managed-zoho-crm-users";
 export { default as notifyAboutExpiringCredentials } from "./notify-about-expiring-credentials";
 export { default as notifyAdminAboutIncompleteSetups } from "./notify-admin-about-incomplete-setups";
 export { default as notifyUserAboutFreebusySetup } from "./notify-user-about-freebusy-setup";
+export { default as resendCalendarSetupEmail } from "./resend-calendar-setup-email";
 export { default as resendZohoCalendarSetupEmail } from "./resend-zoho-calendar-setup-email";
 export { default as zoomUsers } from "./zoom-users";

@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PrismaClient } from "@prisma/client";
 import type { NextApiRequest } from "next";
+
 import { defaultResponder } from "@calcom/lib/server";
 import { getScheduleByUserIdHandler } from "@calcom/trpc/server/routers/viewer/availability/schedule/getScheduleByUserId.handler";
-import { ProviderFactory, CalendarProvider } from "../../services/providers";
+
+import type { CalendarProvider } from "../../services/providers";
+import { ProviderFactory } from "../../services/providers";
 
 export async function getHandler(req: NextApiRequest) {
   const $req = req as NextApiRequest & { prisma: any };
   const prisma: PrismaClient = $req.prisma;
-
+  console.log("Received request to fetch managed calendar users");
   // Get provider from query param, default to zoho for backward compatibility
   const providerParam = (req.query.provider as string) || "zoho";
   const provider = providerParam as CalendarProvider;

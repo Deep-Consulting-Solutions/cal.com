@@ -3,11 +3,13 @@ import type { PrismaClient } from "@prisma/client";
 import type { NextApiRequest } from "next";
 
 import { defaultResponder } from "@calcom/lib/server";
+import Office365CalendarService from "@calcom/office365calendar/lib/CalendarService";
 import ZohoCalendarService from "@calcom/zohocalendar/lib/CalendarService";
 
 import { sendMail } from "../../lib/mailer";
 import incompleteSetupReminderEmail from "../../lib/mailer/templates/incompleteSetupReminderEmail";
-import { getHandler as getManagedCrmUsers } from "../managed-zoho-crm-users/_get";
+import { ProviderFactory } from "../../services/providers";
+import { getHandler as getZohoManagedCrmUsers } from "../managed-zoho-crm-users/_get";
 
 async function postHandler(req: NextApiRequest) {
   const $req = req as NextApiRequest & { prisma: any };
@@ -15,90 +17,152 @@ async function postHandler(req: NextApiRequest) {
 
   const incompleteSetups: { email: string; pendingTasks: string[] }[] = [];
 
-  const { crmUsers } = await getManagedCrmUsers(req);
-  for (const crmUser of crmUsers) {
-    const hasNotStartedSetup = crmUser.status === "Pending Completion";
-    if (hasNotStartedSetup) {
-      incompleteSetups.push({
-        email: crmUser.email,
-        pendingTasks: ["Managed setup has not been completed"],
-      });
-      continue;
-    }
+  // Get available providers
+  const availableProviders = ProviderFactory.getAvailableProviders();
 
-    // check if user has setup zoho calendar
-    const user = await prisma.user.findFirst({
-      where: {
-        email: {
-          in: [...crmUser.emailAddresses, crmUser.email],
+  // Process each provider
+  for (const provider of availableProviders) {
+    const providerService = ProviderFactory.getProvider(provider);
+
+    // Get users for this provider
+    let users: any[] = [];
+
+    if (provider === "zoho") {
+      // For Zoho, use the existing endpoint
+      const result = await getZohoManagedCrmUsers(req);
+      users = result.crmUsers || [];
+    } else {
+      // For other providers, fetch from ManagedSchedulingSetup
+      const managedSetups = await prisma.managedSchedulingSetup.findMany({
+        where: { provider },
+        include: {
+          user: {
+            include: {
+              schedules: true,
+            },
+          },
         },
-      },
-    });
-    if (!user) {
-      continue;
-    }
-
-    const selectedCalendars = await prisma.selectedCalendar.findMany({
-      where: {
-        userId: user.id,
-        integration: "zoho_calendar",
-      },
-    });
-    if (selectedCalendars.length === 0) {
-      incompleteSetups.push({
-        email: crmUser.email,
-        pendingTasks: ["User has not connected any zoho calendar"],
       });
-      continue;
+
+      users = managedSetups.map((setup: any) => ({
+        email: setup.user.email,
+        emailAddresses: [setup.user.email],
+        status: setup.status,
+        userId: setup.userId,
+        provider,
+      }));
     }
 
-    const pendingTasks: string[] = [];
+    // Check each user
+    for (const user of users) {
+      const pendingTasks: string[] = [];
+      const providerName = providerService.getDisplayName();
 
-    // check if free busy is enabled for all calendars
-    for (const calendar of selectedCalendars) {
-      if (!calendar.credentialId) {
-        pendingTasks.push("User needs to reconnect zoho calendar");
+      // Check if setup is pending
+      if (user.status === "Pending Completion") {
+        incompleteSetups.push({
+          email: user.email,
+          pendingTasks: [`${providerName} setup has not been completed`],
+        });
         continue;
       }
 
-      const credential = await prisma.credential.findFirst({
-        where: { id: calendar.credentialId },
-        include: { user: true },
+      // Find the Cal.com user
+      const calUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: user.email }, { id: user.userId || -1 }],
+        },
       });
-      if (!credential) {
-        pendingTasks.push("User needs to reconnect zoho calendar");
+
+      if (!calUser) {
         continue;
       }
 
-      const zohoCalendarService = new ZohoCalendarService(credential);
-      const calendars = await zohoCalendarService.listCalendarsRaw();
+      // Check calendar connections based on provider
+      const integrationSlug = provider === "zoho" ? "zoho_calendar" : "office365_calendar";
 
-      const externalCalendar = calendars.calendars.find((cal) => {
-        return cal.uid === calendar.externalId;
+      const selectedCalendars = await prisma.selectedCalendar.findMany({
+        where: {
+          userId: calUser.id,
+          integration: integrationSlug,
+        },
       });
 
-      if (!externalCalendar) {
-        pendingTasks.push("User needs to reconnect zoho calendar");
+      if (selectedCalendars.length === 0) {
+        incompleteSetups.push({
+          email: user.email,
+          pendingTasks: [`User has not connected any ${providerName}`],
+        });
         continue;
       }
 
-      const isSharingFreeBusy = !!externalCalendar.include_infreebusy;
-      if (!isSharingFreeBusy) {
-        pendingTasks.push(`User needs to enable free busy on zoho calendar: ${externalCalendar.name}`);
-      }
-    }
+      // Check free/busy settings for each calendar
+      for (const calendar of selectedCalendars) {
+        if (!calendar.credentialId) {
+          pendingTasks.push(`User needs to reconnect ${providerName}`);
+          continue;
+        }
 
-    if (pendingTasks.length) {
-      incompleteSetups.push({
-        email: crmUser.email,
-        pendingTasks,
-      });
-      continue;
+        const credential = await prisma.credential.findFirst({
+          where: { id: calendar.credentialId },
+          include: { user: true },
+        });
+
+        if (!credential) {
+          pendingTasks.push(`User needs to reconnect ${providerName}`);
+          continue;
+        }
+
+        // Provider-specific free/busy check
+        try {
+          if (provider === "zoho") {
+            const zohoCalendarService = new ZohoCalendarService(credential);
+            const calendars = await zohoCalendarService.listCalendarsRaw();
+            const externalCalendar = calendars.calendars.find((cal: any) => cal.uid === calendar.externalId);
+
+            if (!externalCalendar) {
+              pendingTasks.push(`User needs to reconnect ${providerName}`);
+              continue;
+            }
+
+            if (!externalCalendar.include_infreebusy) {
+              pendingTasks.push(
+                `User needs to enable free busy on ${providerName}: ${externalCalendar.name}`
+              );
+            }
+          } else if (provider === "office365") {
+            // Office365 handles free/busy differently
+            // For Office365, we might just check if the calendar is properly connected
+            try {
+              const office365Service = new Office365CalendarService(credential);
+              const calendars = await office365Service.listCalendars();
+              const connectedCalendar = calendars.find((cal: any) => cal.externalId === calendar.externalId);
+
+              if (!connectedCalendar) {
+                pendingTasks.push(`User needs to reconnect ${providerName}`);
+              }
+              // Office365 typically shares free/busy by default in the same organization
+            } catch (error) {
+              pendingTasks.push(`User needs to reconnect ${providerName}`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error checking ${provider} calendar:`, error);
+          pendingTasks.push(`Error checking ${providerName} calendar settings`);
+        }
+      }
+
+      if (pendingTasks.length) {
+        incompleteSetups.push({
+          email: user.email,
+          pendingTasks,
+        });
+      }
     }
   }
 
+  // Send notification if there are incomplete setups
   if (incompleteSetups.length) {
-    // send notification to admin
     if (process.env.ADMIN_EMAIL && process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS) {
       await sendMail({
         from: process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS,
@@ -109,10 +173,12 @@ async function postHandler(req: NextApiRequest) {
     }
   }
 
-  console.log(`done processing setup crm users`);
+  console.log(`Processed setup for ${availableProviders.length} provider(s)`);
 
   return {
-    message: "In progress",
+    message: "Incomplete setup check completed",
+    providers: availableProviders,
+    incompleteCount: incompleteSetups.length,
   };
 }
 
