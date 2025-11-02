@@ -47,8 +47,12 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   async fetchUsers(): Promise<CalendarProviderUser[]> {
-    // For Office365, we fetch users from managed scheduling setups
-    // since we don't have direct access to the organization's users like with Zoho
+    // Fetch users from Zoho CRM (same user pool as Zoho provider)
+    // These are the staff members who can be set up with Office365 calendar
+    const { zohoClient } = await import("../../lib/zoho");
+    const zohoUsers = await zohoClient().crm().getRecords("users");
+
+    // Get existing Office365 managed setups from database
     const managedSetups = await prisma.managedSchedulingSetup.findMany({
       where: { provider: "office365" },
       include: {
@@ -56,24 +60,32 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
           include: {
             schedules: true,
             credentials: {
-              where: { appId: "office365calendar" },
+              where: { appId: "office365-calendar" },
             },
           },
         },
       },
     });
 
-    return managedSetups.map((setup) => ({
-      id: setup.id.toString(),
-      email: setup.user.email,
-      name: setup.user.name || "",
-      timeZone: setup.user.timeZone || "UTC",
-      hasCalendar: setup.user.credentials.length > 0,
-      status: setup.status as any,
-      userId: setup.userId.toString(),
-      scheduleId: setup.user.schedules?.[0]?.id?.toString(),
-      zoomUserId: setup.zoomUserId || undefined,
-    }));
+    // Create a map of existing setups by zuid for quick lookup
+    const setupMap = new Map(managedSetups.map((setup) => [setup.externalId, setup]));
+
+    // Map Zoho CRM users and merge with Office365 setup status
+    return (zohoUsers.users || []).map((zohoUser: any) => {
+      const setup = setupMap.get(zohoUser.zuid);
+
+      return {
+        id: zohoUser.zuid,
+        email: zohoUser.email,
+        name: zohoUser.name,
+        timeZone: zohoUser.timeZone || "UTC",
+        hasCalendar: setup ? setup.user.credentials.length > 0 : false,
+        status: (setup?.status || "Not Started") as any,
+        userId: setup?.userId?.toString(),
+        scheduleId: setup?.user?.schedules?.[0]?.id?.toString(),
+        zoomUserId: setup?.zoomUserId || undefined,
+      };
+    });
   }
 
   async createSetup(params: {
@@ -86,7 +98,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }): Promise<ProviderSetupResult> {
     try {
       // Check for app keys first
-      const appKeys = await getAppKeysFromSlug("office365calendar");
+      const appKeys = await getAppKeysFromSlug("office365-calendar");
 
       if (!appKeys || !appKeys.client_id || !appKeys.client_secret) {
         return {
@@ -98,7 +110,6 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
 
       // Create or update Cal.com user
       const username = params.email.split("@")[0];
-      const hashedPassword = await hashPassword(`${Math.random()}`);
 
       const user = await prisma.user.upsert({
         where: { email: params.email },
@@ -106,7 +117,6 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
           email: params.email,
           username,
           name: params.name,
-          password: hashedPassword,
           emailVerified: new Date(),
           identityProvider: "CAL",
           timeZone: params.timeZone,
@@ -119,17 +129,39 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
         },
       });
 
-      // Create schedule
-      const scheduleData = {
-        name: `${params.name}'s Schedule`,
-        timeZone: params.timeZone,
-        availability: params.schedule.availability as any,
-      };
+      // Create password separately if user is new
+      const existingPassword = await prisma.userPassword.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!existingPassword) {
+        const hashedPassword = await hashPassword(`${Math.random()}`);
+        await prisma.userPassword.create({
+          data: {
+            userId: user.id,
+            hash: hashedPassword,
+          },
+        });
+      }
+
+      // Create schedule with availability records
+      const { getAvailabilityFromSchedule } = await import("@calcom/lib/availability");
+      const availabilityData = getAvailabilityFromSchedule(params.schedule.availability);
 
       await prisma.schedule.create({
         data: {
-          ...scheduleData,
+          name: `${params.name}'s Schedule`,
+          timeZone: params.timeZone,
           userId: user.id,
+          availability: {
+            createMany: {
+              data: availabilityData.map((schedule) => ({
+                days: schedule.days,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+              })),
+            },
+          },
         },
       });
 
@@ -273,7 +305,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   async generateOAuthUrl(userId: string): Promise<string> {
-    const appKeys = (await getAppKeysFromSlug("office365calendar")) as Office365Keys;
+    const appKeys = (await getAppKeysFromSlug("office365-calendar")) as Office365Keys;
 
     const tenantId = appKeys.tenant_id || "common";
     const params = new URLSearchParams({
@@ -289,7 +321,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   getAppSlug(): string {
-    return "office365calendar";
+    return "office365-calendar";
   }
 
   getDisplayName(): string {
@@ -297,23 +329,28 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   private async setupZoomCredential(userId: number, zoomUserId: string): Promise<void> {
-    await prisma.credential.upsert({
+    const existing = await prisma.credential.findFirst({
       where: {
-        userId_appId_type: {
-          userId,
-          appId: "zoom",
-          type: "zoom_video",
-        },
-      },
-      create: {
         userId,
-        type: "zoom_video",
         appId: "zoom",
-        key: { zoomUserId },
-      },
-      update: {
-        key: { zoomUserId },
+        type: "zoom_video",
       },
     });
+
+    if (existing) {
+      await prisma.credential.update({
+        where: { id: existing.id },
+        data: { key: { zoomUserId } },
+      });
+    } else {
+      await prisma.credential.create({
+        data: {
+          userId,
+          type: "zoom_video",
+          appId: "zoom",
+          key: { zoomUserId },
+        },
+      });
+    }
   }
 }

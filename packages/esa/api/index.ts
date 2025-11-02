@@ -1,5 +1,5 @@
 export { default as calendarAvailability } from "./calendar-availability";
-export { default as calendarProvidersValidate } from "./calendar-providers/validate";
+export { default as calendarProviders } from "./calendar-providers";
 export { default as completeZohoCalendarSetup } from "./complete-zoho-calendar-setup";
 export { default as getConnectedCalendars } from "./get-connected-calendars";
 export { default as getConnectedCalendarsFromCrm } from "./get-connected-calendars-from-crm";
