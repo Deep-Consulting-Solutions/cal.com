@@ -78,8 +78,10 @@ export interface CalendarProviderService {
 
   /**
    * Generate OAuth URL for calendar connection
+   * @param userId - User ID for the OAuth flow
+   * @param managedSetupId - Optional managed setup ID to include in state
    */
-  generateOAuthUrl(userId: string): Promise<string>;
+  generateOAuthUrl(userId: string, managedSetupId?: number): Promise<string>;
 
   /**
    * Get provider-specific app slug

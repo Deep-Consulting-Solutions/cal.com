@@ -91,7 +91,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       return {
         id: zohoUser.zuid,
         email: zohoUser.email,
-        name: zohoUser.name,
+        name: `${zohoUser.first_name || ""} ${zohoUser.last_name || ""}`.trim(),
         timeZone: zohoUser.timeZone || "UTC",
         hasCalendar: hasZohoMail,
         status: setup?.status || "Not Started",
@@ -306,7 +306,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
     }
   }
 
-  async generateOAuthUrl(userId: string): Promise<string> {
+  async generateOAuthUrl(userId: string, managedSetupId?: number): Promise<string> {
     const appKeys = await getAppKeysFromSlug("zohocalendar");
     const { client_id } = zohoKeysSchema.parse(appKeys);
 

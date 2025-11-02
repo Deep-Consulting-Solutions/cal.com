@@ -100,7 +100,8 @@ export async function postHandler(req: NextApiRequest) {
 
     // Generate OAuth URL using provider service
     const oauthUrl = await providerService.generateOAuthUrl(
-      provider === "zoho" ? userId : calUserId.toString()
+      provider === "zoho" ? userId : calUserId.toString(),
+      userSetup.id // Pass managedSetupId for state parameter
     );
 
     // Send setup email using generic function

@@ -77,7 +77,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       return {
         id: zohoUser.zuid,
         email: zohoUser.email,
-        name: zohoUser.name,
+        name: `${zohoUser.first_name || ""} ${zohoUser.last_name || ""}`.trim(),
         timeZone: zohoUser.timeZone || "UTC",
         hasCalendar: setup ? setup.user.credentials.length > 0 : false,
         status: (setup?.status || "Not Started") as any,
@@ -171,7 +171,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       }
 
       // Create ManagedSchedulingSetup entry
-      await prisma.managedSchedulingSetup.upsert({
+      const setup = await prisma.managedSchedulingSetup.upsert({
         where: {
           userId_provider: {
             userId: user.id,
@@ -191,8 +191,8 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
         },
       });
 
-      // Generate OAuth URL
-      const oauthUrl = await this.generateOAuthUrl(user.id.toString());
+      // Generate OAuth URL with managed setup context
+      const oauthUrl = await this.generateOAuthUrl(user.id.toString(), setup.id);
 
       // Send setup email
       await sendCalendarSetupEmail({
@@ -304,20 +304,42 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
     }
   }
 
-  async generateOAuthUrl(userId: string): Promise<string> {
+  async generateOAuthUrl(userId: string, managedSetupId?: number): Promise<string> {
     const appKeys = (await getAppKeysFromSlug("office365-calendar")) as Office365Keys;
+    const { WEBAPP_URL } = process.env;
 
     const tenantId = appKeys.tenant_id || "common";
+
+    // Create state with managed setup context
+    const stateData = managedSetupId
+      ? {
+          fromManagedSetup: true,
+          managedSetupId,
+          userId: parseInt(userId),
+          managedSetupReturnTo: `${WEBAPP_URL}/api/esa/setup-complete`,
+          onErrorReturnTo: `${WEBAPP_URL}/api/esa/setup-complete`,
+        }
+      : { userId: parseInt(userId) };
+
     const params = new URLSearchParams({
       client_id: appKeys.client_id,
       response_type: "code",
       redirect_uri: this.config.redirectUri || "",
       response_mode: "query",
       scope: (this.config.scopes || []).join(" "),
-      state: userId,
+      state: JSON.stringify(stateData),
+      prompt: "consent",
     });
 
-    return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+    const oauthUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+
+    console.log("[OFFICE365-PROVIDER] Generated OAuth URL", {
+      stateData,
+      stateString: JSON.stringify(stateData),
+      url: oauthUrl,
+    });
+
+    return oauthUrl;
   }
 
   getAppSlug(): string {
