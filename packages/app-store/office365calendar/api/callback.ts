@@ -12,14 +12,25 @@ import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import getInstalledAppPath from "../../_utils/getInstalledAppPath";
 import { decodeOAuthState } from "../../_utils/oauth/decodeOAuthState";
 
-const scopes = ["offline_access", "Calendars.Read", "Calendars.ReadWrite"];
+const scopes = ["offline_access", "User.Read", "Calendars.ReadWrite"];
 
 let client_id = "";
 let client_secret = "";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { code } = req.query;
-  const state = decodeOAuthState(req);
+  const state = decodeOAuthState(req) as any & {
+    fromManagedSetup?: boolean;
+    managedSetupId?: number;
+    userId?: number;
+    managedSetupReturnTo?: string;
+  };
+
+  console.log("[OFFICE365-CALLBACK] Handler started", {
+    hasCode: !!code,
+    state,
+    sessionUserId: req.session?.user?.id,
+  });
 
   if (typeof code !== "string") {
     if (state?.onErrorReturnTo || state?.returnTo) {
@@ -64,7 +75,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const responseBody = await response.json();
 
+  console.log("[OFFICE365-CALLBACK] Token exchange completed", {
+    responseOk: response.ok,
+    hasAccessToken: !!responseBody.access_token,
+  });
+
   if (!response.ok) {
+    console.log("[OFFICE365-CALLBACK] Token exchange failed", responseBody);
     return res.redirect(`/apps/installed?error=${JSON.stringify(responseBody)}`);
   }
 
@@ -111,17 +128,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  if (defaultCalendar?.id && req.session?.user?.id) {
+  // Support both authenticated users and managed setup (unauthenticated) users
+  const userId = state?.userId || req.session?.user?.id;
+  const fromManagedSetup = !!state?.fromManagedSetup;
+
+  console.log("[OFFICE365-CALLBACK] About to create credential", {
+    hasDefaultCalendar: !!defaultCalendar?.id,
+    defaultCalendarId: defaultCalendar?.id,
+    userId,
+    fromManagedSetup,
+    managedSetupId: state?.managedSetupId,
+  });
+
+  if (defaultCalendar?.id && userId) {
     const credential = await prisma.credential.create({
       data: {
         type: "office365_calendar",
         key: responseBody,
-        userId: req.session?.user.id,
+        userId,
         appId: "office365-calendar",
       },
     });
+
+    console.log("[OFFICE365-CALLBACK] Credential created", {
+      credentialId: credential.id,
+      willUpdateStatus: fromManagedSetup && !!state?.managedSetupId,
+    });
+
+    // Update managed setup status immediately after credential creation
+    if (fromManagedSetup && state?.managedSetupId) {
+      await prisma.managedSchedulingSetup.update({
+        where: { id: state.managedSetupId },
+        data: { status: "Completed" },
+      });
+      console.log("[OFFICE365-CALLBACK] Status updated to Completed", {
+        managedSetupId: state.managedSetupId,
+      });
+    }
+
     const selectedCalendarWhereUnique = {
-      userId: req.session?.user.id,
+      userId,
       integration: "office365_calendar",
       externalId: defaultCalendar.id,
     };
@@ -134,16 +180,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           credentialId: credential.id,
         },
       });
+      console.log("[OFFICE365-CALLBACK] SelectedCalendar created successfully");
+
+      // Create destination calendar for managed setup users
+      if (fromManagedSetup) {
+        await prisma.destinationCalendar.upsert({
+          where: { userId },
+          create: {
+            userId,
+            integration: "office365_calendar",
+            externalId: defaultCalendar.id,
+            credentialId: credential.id,
+            primaryEmail: responseBody.email,
+          },
+          update: {
+            integration: "office365_calendar",
+            externalId: defaultCalendar.id,
+            credentialId: credential.id,
+            primaryEmail: responseBody.email,
+          },
+        });
+        console.log("[OFFICE365-CALLBACK] DestinationCalendar created/updated successfully");
+      }
     } catch (error) {
+      console.log("[OFFICE365-CALLBACK] SelectedCalendar creation failed, trying renewal", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       let errorMessage = "something_went_wrong";
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         // it is possible a selectedCalendar was orphaned, in this situation-
         // we want to recover by connecting the existing selectedCalendar to the new Credential.
         if (await renewSelectedCalendarCredentialId(selectedCalendarWhereUnique, credential.id)) {
-          res.redirect(
-            getSafeRedirectUrl(state?.returnTo) ??
-              getInstalledAppPath({ variant: "calendar", slug: "office365-calendar" })
-          );
+          console.log("[OFFICE365-CALLBACK] Renewal successful, redirecting");
+          // Handle managed setup redirect
+          if (fromManagedSetup && state?.managedSetupReturnTo) {
+            res.redirect(
+              getSafeRedirectUrl(state.managedSetupReturnTo) ?? `${WEBAPP_URL}/api/esa/setup-complete`
+            );
+          } else {
+            res.redirect(
+              getSafeRedirectUrl(state?.returnTo) ??
+                getInstalledAppPath({ variant: "calendar", slug: "office365-calendar" })
+            );
+          }
           return;
         }
         // else
@@ -160,9 +239,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  res.redirect(
-    getSafeRedirectUrl(state?.returnTo) ??
-      getInstalledAppPath({ variant: "calendar", slug: "office365-calendar" })
-  );
+  // Redirect based on flow type
+  console.log("[OFFICE365-CALLBACK] Final redirect", {
+    fromManagedSetup,
+    hasReturnTo: !!state?.managedSetupReturnTo,
+    redirectUrl: fromManagedSetup
+      ? getSafeRedirectUrl(state?.managedSetupReturnTo) ?? `${WEBAPP_URL}/api/esa/setup-complete`
+      : getSafeRedirectUrl(state?.returnTo) ??
+        getInstalledAppPath({ variant: "calendar", slug: "office365-calendar" }),
+  });
+
+  if (fromManagedSetup && state?.managedSetupReturnTo) {
+    res.redirect(getSafeRedirectUrl(state.managedSetupReturnTo) ?? `${WEBAPP_URL}/api/esa/setup-complete`);
+  } else {
+    res.redirect(
+      getSafeRedirectUrl(state?.returnTo) ??
+        getInstalledAppPath({ variant: "calendar", slug: "office365-calendar" })
+    );
+  }
   return;
 }

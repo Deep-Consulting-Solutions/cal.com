@@ -1,15 +1,15 @@
+import getAppKeysFromSlug from "@calcom/app-store/_utils/getAppKeysFromSlug";
+import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
+import prisma from "@calcom/prisma";
+
+import { sendCalendarSetupEmail } from "../../lib/utils";
 import { BaseCalendarProvider } from "./BaseCalendarProvider";
-import {
+import type {
   CalendarProviderConfig,
   CalendarProviderUser,
   CalendarProviderSchedule,
   ProviderSetupResult,
 } from "./types";
-import { getAppKeysFromSlug } from "@calcom/app-store/_utils/getAppKeysFromSlug";
-import prisma from "@calcom/prisma";
-import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
-import { MembershipRole } from "@calcom/prisma/enums";
-import { sendCalendarSetupEmail } from "../../lib/utils";
 
 interface Office365Keys {
   client_id: string;
@@ -28,20 +28,13 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       clientId: this.getRequiredEnvVar("MICROSOFT_CLIENT_ID"),
       clientSecret: this.getRequiredEnvVar("MICROSOFT_CLIENT_SECRET"),
       redirectUri: `${process.env.WEBAPP_URL}/api/integrations/office365calendar/callback`,
-      scopes: [
-        "User.Read",
-        "Calendars.ReadWrite",
-        "offline_access",
-      ],
+      scopes: ["User.Read", "Calendars.ReadWrite", "offline_access"],
     };
   }
 
   isConfigured(): boolean {
     // Check if Office365 calendar app is configured in Cal.com
-    return !!(
-      this.config.clientId &&
-      this.config.clientSecret
-    );
+    return !!(this.config.clientId && this.config.clientSecret);
   }
 
   getConfigurationError(): string | null {
@@ -54,8 +47,12 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   async fetchUsers(): Promise<CalendarProviderUser[]> {
-    // For Office365, we fetch users from managed scheduling setups
-    // since we don't have direct access to the organization's users like with Zoho
+    // Fetch users from Zoho CRM (same user pool as Zoho provider)
+    // These are the staff members who can be set up with Office365 calendar
+    const { zohoClient } = await import("../../lib/zoho");
+    const zohoUsers = await zohoClient().crm().getRecords("users");
+
+    // Get existing Office365 managed setups from database
     const managedSetups = await prisma.managedSchedulingSetup.findMany({
       where: { provider: "office365" },
       include: {
@@ -63,24 +60,32 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
           include: {
             schedules: true,
             credentials: {
-              where: { appId: "office365calendar" },
+              where: { appId: "office365-calendar" },
             },
           },
         },
       },
     });
 
-    return managedSetups.map(setup => ({
-      id: setup.id.toString(),
-      email: setup.user.email,
-      name: setup.user.name || "",
-      timeZone: setup.user.timeZone || "UTC",
-      hasCalendar: setup.user.credentials.length > 0,
-      status: setup.status as any,
-      userId: setup.userId.toString(),
-      scheduleId: setup.user.schedules?.[0]?.id?.toString(),
-      zoomUserId: setup.zoomUserId || undefined,
-    }));
+    // Create a map of existing setups by zuid for quick lookup
+    const setupMap = new Map(managedSetups.map((setup) => [setup.externalId, setup]));
+
+    // Map Zoho CRM users and merge with Office365 setup status
+    return (zohoUsers.users || []).map((zohoUser: any) => {
+      const setup = setupMap.get(zohoUser.zuid);
+
+      return {
+        id: zohoUser.zuid,
+        email: zohoUser.email,
+        name: `${zohoUser.first_name || ""} ${zohoUser.last_name || ""}`.trim(),
+        timeZone: zohoUser.timeZone || "UTC",
+        hasCalendar: setup ? setup.user.credentials.length > 0 : false,
+        status: (setup?.status || "Not Started") as any,
+        userId: setup?.userId?.toString(),
+        scheduleId: setup?.user?.schedules?.[0]?.id?.toString(),
+        zoomUserId: setup?.zoomUserId || undefined,
+      };
+    });
   }
 
   async createSetup(params: {
@@ -93,18 +98,18 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }): Promise<ProviderSetupResult> {
     try {
       // Check for app keys first
-      const appKeys = await getAppKeysFromSlug("office365calendar");
+      const appKeys = await getAppKeysFromSlug("office365-calendar");
 
       if (!appKeys || !appKeys.client_id || !appKeys.client_secret) {
         return {
           success: false,
-          error: "Microsoft Outlook Calendar app not configured in Cal.com. Please configure the Office365calendar app with valid credentials.",
+          error:
+            "Microsoft Outlook Calendar app not configured in Cal.com. Please configure the Office365calendar app with valid credentials.",
         };
       }
 
       // Create or update Cal.com user
       const username = params.email.split("@")[0];
-      const hashedPassword = await hashPassword(`${Math.random()}`);
 
       const user = await prisma.user.upsert({
         where: { email: params.email },
@@ -112,7 +117,6 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
           email: params.email,
           username,
           name: params.name,
-          password: hashedPassword,
           emailVerified: new Date(),
           identityProvider: "CAL",
           timeZone: params.timeZone,
@@ -125,17 +129,39 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
         },
       });
 
-      // Create schedule
-      const scheduleData = {
-        name: `${params.name}'s Schedule`,
-        timeZone: params.timeZone,
-        availability: params.schedule.availability as any,
-      };
+      // Create password separately if user is new
+      const existingPassword = await prisma.userPassword.findUnique({
+        where: { userId: user.id },
+      });
 
-      const schedule = await prisma.schedule.create({
+      if (!existingPassword) {
+        const hashedPassword = await hashPassword(`${Math.random()}`);
+        await prisma.userPassword.create({
+          data: {
+            userId: user.id,
+            hash: hashedPassword,
+          },
+        });
+      }
+
+      // Create schedule with availability records
+      const { getAvailabilityFromSchedule } = await import("@calcom/lib/availability");
+      const availabilityData = getAvailabilityFromSchedule(params.schedule.availability);
+
+      await prisma.schedule.create({
         data: {
-          ...scheduleData,
+          name: `${params.name}'s Schedule`,
+          timeZone: params.timeZone,
           userId: user.id,
+          availability: {
+            createMany: {
+              data: availabilityData.map((schedule) => ({
+                days: schedule.days,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+              })),
+            },
+          },
         },
       });
 
@@ -165,8 +191,8 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
         },
       });
 
-      // Generate OAuth URL
-      const oauthUrl = await this.generateOAuthUrl(user.id.toString());
+      // Generate OAuth URL with managed setup context
+      const oauthUrl = await this.generateOAuthUrl(user.id.toString(), setup.id);
 
       // Send setup email
       await sendCalendarSetupEmail({
@@ -278,24 +304,46 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
     }
   }
 
-  async generateOAuthUrl(userId: string): Promise<string> {
-    const appKeys = await getAppKeysFromSlug("office365calendar") as Office365Keys;
+  async generateOAuthUrl(userId: string, managedSetupId?: number): Promise<string> {
+    const appKeys = (await getAppKeysFromSlug("office365-calendar")) as Office365Keys;
+    const { WEBAPP_URL } = process.env;
 
     const tenantId = appKeys.tenant_id || "common";
+
+    // Create state with managed setup context
+    const stateData = managedSetupId
+      ? {
+          fromManagedSetup: true,
+          managedSetupId,
+          userId: parseInt(userId),
+          managedSetupReturnTo: `${WEBAPP_URL}/api/esa/setup-complete`,
+          onErrorReturnTo: `${WEBAPP_URL}/api/esa/setup-complete`,
+        }
+      : { userId: parseInt(userId) };
+
     const params = new URLSearchParams({
       client_id: appKeys.client_id,
       response_type: "code",
-      redirect_uri: this.config.redirectUri!,
+      redirect_uri: this.config.redirectUri || "",
       response_mode: "query",
-      scope: this.config.scopes!.join(" "),
-      state: userId,
+      scope: (this.config.scopes || []).join(" "),
+      state: JSON.stringify(stateData),
+      prompt: "consent",
     });
 
-    return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+    const oauthUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+
+    console.log("[OFFICE365-PROVIDER] Generated OAuth URL", {
+      stateData,
+      stateString: JSON.stringify(stateData),
+      url: oauthUrl,
+    });
+
+    return oauthUrl;
   }
 
   getAppSlug(): string {
-    return "office365calendar";
+    return "office365-calendar";
   }
 
   getDisplayName(): string {
@@ -303,23 +351,28 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   private async setupZoomCredential(userId: number, zoomUserId: string): Promise<void> {
-    await prisma.credential.upsert({
+    const existing = await prisma.credential.findFirst({
       where: {
-        userId_appId_type: {
-          userId,
-          appId: "zoom",
-          type: "zoom_video",
-        },
-      },
-      create: {
         userId,
-        type: "zoom_video",
         appId: "zoom",
-        key: { zoomUserId },
-      },
-      update: {
-        key: { zoomUserId },
+        type: "zoom_video",
       },
     });
+
+    if (existing) {
+      await prisma.credential.update({
+        where: { id: existing.id },
+        data: { key: { zoomUserId } },
+      });
+    } else {
+      await prisma.credential.create({
+        data: {
+          userId,
+          type: "zoom_video",
+          appId: "zoom",
+          key: { zoomUserId },
+        },
+      });
+    }
   }
 }

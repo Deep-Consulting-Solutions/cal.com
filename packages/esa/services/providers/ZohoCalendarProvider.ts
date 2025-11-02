@@ -1,18 +1,17 @@
+import getAppKeysFromSlug from "@calcom/app-store/_utils/getAppKeysFromSlug";
+import { appKeysSchema as zohoKeysSchema } from "@calcom/app-store/zohocalendar/zod";
+import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
+import prisma from "@calcom/prisma";
+
+import { sendZohoCalendarSetupEmail } from "../../lib/utils";
+import { zohoClient } from "../../lib/zoho";
 import { BaseCalendarProvider } from "./BaseCalendarProvider";
-import {
+import type {
   CalendarProviderConfig,
   CalendarProviderUser,
   CalendarProviderSchedule,
   ProviderSetupResult,
 } from "./types";
-import { zohoClient } from "../../lib/zoho";
-import { getAppKeysFromSlug } from "@calcom/app-store/_utils/getAppKeysFromSlug";
-import { appKeysSchema as zohoKeysSchema } from "@calcom/app-store/zohocalendar/zod";
-import prisma from "@calcom/prisma";
-import { hashPassword } from "@calcom/features/auth/lib/hashPassword";
-import { MembershipRole } from "@calcom/prisma/enums";
-import { sendZohoCalendarSetupEmail } from "../../lib/utils";
-import type { SelectedCalendarEventTypePayload } from "@calcom/prisma/zod-utils";
 
 export class ZohoCalendarProvider extends BaseCalendarProvider {
   constructor() {
@@ -46,7 +45,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       "ZOHO_CRM_BASE_URL",
     ];
 
-    const missing = requiredEnvVars.filter(varName => !this.getRequiredEnvVar(varName));
+    const missing = requiredEnvVars.filter((varName) => !this.getRequiredEnvVar(varName));
 
     if (missing.length > 0) {
       return `Zoho Calendar not configured. Missing environment variables: ${missing.join(", ")}`;
@@ -83,16 +82,16 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       },
     });
 
-    const setupMap = new Map(managedSetups.map(setup => [setup.zuid, setup]));
+    const setupMap = new Map(managedSetups.map((setup) => [setup.zuid, setup]));
 
-    return zohoUsers.map(zohoUser => {
+    return (zohoUsers.users || []).map((zohoUser) => {
       const setup = setupMap.get(zohoUser.zuid);
       const hasZohoMail = mailAccounts.includes(zohoUser.email);
 
       return {
         id: zohoUser.zuid,
         email: zohoUser.email,
-        name: zohoUser.name,
+        name: `${zohoUser.first_name || ""} ${zohoUser.last_name || ""}`.trim(),
         timeZone: zohoUser.timeZone || "UTC",
         hasCalendar: hasZohoMail,
         status: setup?.status || "Not Started",
@@ -119,13 +118,13 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       if (!parsedKeys.success) {
         return {
           success: false,
-          error: "Zoho Calendar app not configured in Cal.com. Please configure the Zohocalendar app with valid credentials.",
+          error:
+            "Zoho Calendar app not configured in Cal.com. Please configure the Zohocalendar app with valid credentials.",
         };
       }
 
       // Create or update Cal.com user
       const username = params.email.split("@")[0];
-      const hashedPassword = await hashPassword(`${Math.random()}`);
 
       const user = await prisma.user.upsert({
         where: { email: params.email },
@@ -133,7 +132,6 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
           email: params.email,
           username,
           name: params.name,
-          password: hashedPassword,
           emailVerified: new Date(),
           identityProvider: "CAL",
           timeZone: params.timeZone,
@@ -146,17 +144,39 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
         },
       });
 
-      // Create schedule
-      const scheduleData = {
-        name: `${params.name}'s Schedule`,
-        timeZone: params.timeZone,
-        availability: params.schedule.availability as any,
-      };
+      // Create password separately if user is new
+      const existingPassword = await prisma.userPassword.findUnique({
+        where: { userId: user.id },
+      });
 
-      const schedule = await prisma.schedule.create({
+      if (!existingPassword) {
+        const hashedPassword = await hashPassword(`${Math.random()}`);
+        await prisma.userPassword.create({
+          data: {
+            userId: user.id,
+            hash: hashedPassword,
+          },
+        });
+      }
+
+      // Create schedule with availability records
+      const { getAvailabilityFromSchedule } = await import("@calcom/lib/availability");
+      const availabilityData = getAvailabilityFromSchedule(params.schedule.availability);
+
+      await prisma.schedule.create({
         data: {
-          ...scheduleData,
+          name: `${params.name}'s Schedule`,
+          timeZone: params.timeZone,
           userId: user.id,
+          availability: {
+            createMany: {
+              data: availabilityData.map((schedule) => ({
+                days: schedule.days,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+              })),
+            },
+          },
         },
       });
 
@@ -166,7 +186,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
       }
 
       // Create ZohoSchedulingSetup entry
-      const setup = await prisma.zohoSchedulingSetup.upsert({
+      await prisma.zohoSchedulingSetup.upsert({
         where: { zuid: params.userId },
         create: {
           zuid: params.userId,
@@ -286,15 +306,15 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
     }
   }
 
-  async generateOAuthUrl(userId: string): Promise<string> {
+  async generateOAuthUrl(userId: string, managedSetupId?: number): Promise<string> {
     const appKeys = await getAppKeysFromSlug("zohocalendar");
     const { client_id } = zohoKeysSchema.parse(appKeys);
 
     const params = new URLSearchParams({
-      scope: this.config.scopes!.join(" "),
+      scope: (this.config.scopes || []).join(" "),
       client_id,
       response_type: "code",
-      redirect_uri: this.config.redirectUri!,
+      redirect_uri: this.config.redirectUri || "",
       access_type: "offline",
       state: userId, // Pass zuid as state for callback
     });
@@ -311,25 +331,28 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
   }
 
   private async setupZoomCredential(userId: number, zoomUserId: string): Promise<void> {
-    // Implementation would depend on your Zoom integration setup
-    // This is a placeholder
-    await prisma.credential.upsert({
+    const existing = await prisma.credential.findFirst({
       where: {
-        userId_appId_type: {
-          userId,
-          appId: "zoom",
-          type: "zoom_video",
-        },
-      },
-      create: {
         userId,
-        type: "zoom_video",
         appId: "zoom",
-        key: { zoomUserId },
-      },
-      update: {
-        key: { zoomUserId },
+        type: "zoom_video",
       },
     });
+
+    if (existing) {
+      await prisma.credential.update({
+        where: { id: existing.id },
+        data: { key: { zoomUserId } },
+      });
+    } else {
+      await prisma.credential.create({
+        data: {
+          userId,
+          type: "zoom_video",
+          appId: "zoom",
+          key: { zoomUserId },
+        },
+      });
+    }
   }
 }

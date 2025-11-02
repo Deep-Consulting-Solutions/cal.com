@@ -261,27 +261,28 @@ model User {
   receiveMonthlyDigestEmail Boolean? @default(true)
 
   /// @zod.custom(imports.userMetadata)
-  metadata             Json?
-  verified             Boolean?                @default(false)
-  role                 UserPermissionRole      @default(USER)
-  disableImpersonation Boolean                 @default(false)
-  impersonatedUsers    Impersonations[]        @relation("impersonated_user")
-  impersonatedBy       Impersonations[]        @relation("impersonated_by_user")
-  apiKeys              ApiKey[]
-  accounts             Account[]
-  sessions             Session[]
-  Feedback             Feedback[]
-  ownedEventTypes      EventType[]             @relation("owner")
-  workflows            Workflow[]
-  routingForms         App_RoutingForms_Form[] @relation("routing-form")
-  verifiedNumbers      VerifiedNumber[]
-  hosts                Host[]
-  organizationId       Int?
-  organization         Team?                   @relation("scope", fields: [organizationId], references: [id], onDelete: SetNull)
-  accessCodes          AccessCode[]
-  bookingRedirects     OutOfOfficeEntry[]
-  bookingRedirectsTo   OutOfOfficeEntry[]      @relation(name: "toUser")
-  zohoSchedulingSetup  ZohoSchedulingSetup[]
+  metadata               Json?
+  verified               Boolean?                 @default(false)
+  role                   UserPermissionRole       @default(USER)
+  disableImpersonation   Boolean                  @default(false)
+  impersonatedUsers      Impersonations[]         @relation("impersonated_user")
+  impersonatedBy         Impersonations[]         @relation("impersonated_by_user")
+  apiKeys                ApiKey[]
+  accounts               Account[]
+  sessions               Session[]
+  Feedback               Feedback[]
+  ownedEventTypes        EventType[]              @relation("owner")
+  workflows              Workflow[]
+  routingForms           App_RoutingForms_Form[]  @relation("routing-form")
+  verifiedNumbers        VerifiedNumber[]
+  hosts                  Host[]
+  organizationId         Int?
+  organization           Team?                    @relation("scope", fields: [organizationId], references: [id], onDelete: SetNull)
+  accessCodes            AccessCode[]
+  bookingRedirects       OutOfOfficeEntry[]
+  bookingRedirectsTo     OutOfOfficeEntry[]       @relation(name: "toUser")
+  zohoSchedulingSetup    ZohoSchedulingSetup[]
+  managedSchedulingSetup ManagedSchedulingSetup[] @relation("ManagedSchedulingSetup")
 
   // Used to lock the user account
   locked           Boolean   @default(false)
@@ -1141,6 +1142,24 @@ model ZohoSchedulingSetup {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ManagedSchedulingSetup {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  provider   String // "zoho" | "office365"
+  externalId String // Provider-specific user ID
+  status     String   @default("Not Started") // "Not Started" | "In Progress" | "Pending Completion" | "Completed"
+  zoomUserId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation("ManagedSchedulingSetup", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@unique([provider, externalId])
+  @@index([provider])
+  @@index([status])
 }
 
 model CredentialExpiryNotification {
