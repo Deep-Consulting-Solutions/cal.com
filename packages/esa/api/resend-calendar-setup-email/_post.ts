@@ -105,7 +105,7 @@ export async function postHandler(req: NextApiRequest) {
 
     // Send setup email using generic function
     const { sendCalendarSetupEmail } = await import("../../lib/utils");
-
+    console.log(`Resending setup email to ${userEmail}`);
     if (process.env.ESA_MANAGED_EMAIL_SENDER_ADDRESS) {
       await sendCalendarSetupEmail({
         to: userEmail,
