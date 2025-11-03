@@ -28,7 +28,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       clientId: this.getRequiredEnvVar("MICROSOFT_CLIENT_ID"),
       clientSecret: this.getRequiredEnvVar("MICROSOFT_CLIENT_SECRET"),
       redirectUri: `${process.env.WEBAPP_URL}/api/integrations/office365calendar/callback`,
-      scopes: ["User.Read", "Calendars.ReadWrite", "offline_access"],
+      scopes: ["User.Read", "Calendars.Read", "Calendars.ReadWrite", "offline_access"],
     };
   }
 
@@ -327,7 +327,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
       response_mode: "query",
       scope: (this.config.scopes || []).join(" "),
       state: JSON.stringify(stateData),
-      prompt: "consent",
+      prompt: "select_account",
     });
 
     const oauthUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
