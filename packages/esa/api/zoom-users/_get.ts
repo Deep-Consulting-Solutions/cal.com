@@ -29,6 +29,7 @@ async function getHandler(req: NextApiRequest) {
     })
     .map((entry) => entry.zoomUserId);
 
+  console.log("schedulingSetupEntries", response);
   const notYetLinkedZoomUsers = (response.users as ZoomUser[])
     .filter((user) => {
       return !linkedZoomAccounts.includes(user.id);
