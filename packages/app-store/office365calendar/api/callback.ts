@@ -12,7 +12,7 @@ import getAppKeysFromSlug from "../../_utils/getAppKeysFromSlug";
 import getInstalledAppPath from "../../_utils/getInstalledAppPath";
 import { decodeOAuthState } from "../../_utils/oauth/decodeOAuthState";
 
-const scopes = ["offline_access", "User.Read", "Calendars.ReadWrite"];
+const scopes = ["offline_access", "User.Read", "Calendars.ReadWrite", "Calendars.Read"];
 
 let client_id = "";
 let client_secret = "";
@@ -92,8 +92,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // In some cases, graphUser.mail is null. Then graphUser.userPrincipalName most likely contains the email address.
   responseBody.email = graphUser.mail ?? graphUser.userPrincipalName;
-  responseBody.expiry_date = Math.round(+new Date() / 1000 + responseBody.expires_in); // set expiry date in seconds
-  // Keep expires_in for CalendarService compatibility - don't delete it
+  // Store both expiry_date and expires_in as absolute timestamps for CalendarService compatibility
+  const expiryTimestamp = Math.round(+new Date() / 1000 + responseBody.expires_in);
+  responseBody.expiry_date = expiryTimestamp;
+  responseBody.expires_in = expiryTimestamp; // Store as absolute timestamp, not duration offset
 
   // Set the isDefaultCalendar as selectedCalendar
   // If a user has multiple calendars, keep on making calls until we find the default calendar
