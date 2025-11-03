@@ -161,7 +161,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
 
       // Create schedule with availability records
       const { getAvailabilityFromSchedule } = await import("@calcom/lib/availability");
-      const availabilityData = getAvailabilityFromSchedule(params.schedule.availability);
+      const availabilityData = getAvailabilityFromSchedule(params.schedule.availability as any);
 
       await prisma.schedule.create({
         data: {
