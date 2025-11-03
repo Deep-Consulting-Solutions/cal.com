@@ -84,6 +84,10 @@ import {
   EventTypeMetaDataSchema,
   userMetadata as userMetadataSchema,
 } from "@calcom/prisma/zod-utils";
+import {
+  CACHE_REFRESH_REASON_ENUM,
+  refreshAvailableSlotsCache,
+} from "@calcom/trpc/server/routers/viewer/slots/util";
 import type {
   AdditionalInformation,
   AppsStatus,
@@ -101,7 +105,6 @@ import { refreshCredentials } from "./getAllCredentialsForUsersOnEvent/refreshCr
 import getBookingDataSchema from "./getBookingDataSchema";
 import handleSeats from "./handleSeats/handleSeats";
 import type { BookingSeat } from "./handleSeats/types";
-import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "@calcom/trpc/server/routers/viewer/slots/util";
 
 const translator = short();
 const log = logger.getSubLogger({ prefix: ["[api] book:user"] });
@@ -940,7 +943,7 @@ async function handler(
     ...reqBody
   } = bookingData;
 
-  let location = bookingData.location === 'conferencing' ? 'integrations:zoom' : bookingData.location;
+  let location = bookingData.location === "conferencing" ? "integrations:zoom" : bookingData.location;
 
   const loggerWithEventDetails = createLoggerWithEventDetails(eventTypeId, reqBody.user, eventTypeSlug);
 
@@ -2346,11 +2349,11 @@ async function handler(
 
   // No need to wait for this, it is a background process and has its try catch
   refreshAvailableSlotsCache(
-    CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED, 
-    [responseToReturn.userId || ''], 
+    CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED,
+    [responseToReturn.userId || ""],
     reqBody.start,
-    reqBody.end 
-  )
+    reqBody.end
+  );
 
   return responseToReturn;
 }

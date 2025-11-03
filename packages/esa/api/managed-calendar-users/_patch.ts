@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextApiRequest } from "next";
+
 import { defaultResponder } from "@calcom/lib/server";
+
 import { ProviderFactory, CalendarProvider } from "../../services/providers";
 
 interface UpdateSetupRequest {
@@ -14,7 +16,8 @@ interface UpdateSetupRequest {
     integration: string;
     selected: boolean;
   }>;
-  calendars?: Array<{ // Generic calendar format
+  calendars?: Array<{
+    // Generic calendar format
     externalId: string;
     credentialId: number;
     selected: boolean;
@@ -61,11 +64,13 @@ export async function patchHandler(req: NextApiRequest) {
   }
 
   // Handle calendars - support both old zohoCalendars and new calendars format
-  const calendars = body.calendars || body.zohoCalendars?.map(cal => ({
-    externalId: cal.externalId,
-    credentialId: cal.credentialId,
-    selected: cal.selected,
-  }));
+  const calendars =
+    body.calendars ||
+    body.zohoCalendars?.map((cal) => ({
+      externalId: cal.externalId,
+      credentialId: cal.credentialId,
+      selected: cal.selected,
+    }));
 
   // Update setup using provider
   const result = await providerService.updateSetup({

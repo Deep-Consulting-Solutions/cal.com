@@ -1,5 +1,7 @@
 import type { NextApiRequest } from "next";
+
 import { defaultResponder } from "@calcom/lib/server";
+
 import { ProviderFactory, CalendarProvider } from "../../services/providers";
 
 export async function getHandler(req: NextApiRequest) {
@@ -8,7 +10,7 @@ export async function getHandler(req: NextApiRequest) {
   if (!providerParam) {
     // Return all available providers with their status
     const providers = ["zoho", "office365"] as CalendarProvider[];
-    const results = providers.map(provider => {
+    const results = providers.map((provider) => {
       const service = ProviderFactory.getProvider(provider);
       return {
         provider,

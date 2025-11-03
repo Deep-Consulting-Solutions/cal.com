@@ -5,9 +5,8 @@ import { HttpError } from "@calcom/lib/http-error";
 import { defaultResponder } from "@calcom/lib/server";
 import { MembershipRole } from "@calcom/prisma/client";
 
-import { schemaEventTypeCreateBodyParams, schemaEventTypeReadPublic } from "../../lib/validations/event-type";
 import { canUserAccessTeamWithRole } from "../../api/teams/[teamId]/_auth-middleware";
-
+import { schemaEventTypeCreateBodyParams, schemaEventTypeReadPublic } from "../../lib/validations/event-type";
 import checkParentEventOwnership from "./_utils/checkParentEventOwnership";
 import checkTeamEventEditPermission from "./_utils/checkTeamEventEditPermission";
 import checkUserMembership from "./_utils/checkUserMembership";

@@ -23,7 +23,7 @@ export abstract class BaseCalendarProvider implements CalendarProviderService {
   }
 
   protected validateConfiguration(requiredFields: string[]): string | null {
-    const missing = requiredFields.filter(field => !this.config[field as keyof CalendarProviderConfig]);
+    const missing = requiredFields.filter((field) => !this.config[field as keyof CalendarProviderConfig]);
 
     if (missing.length > 0) {
       return `Missing configuration for ${this.getDisplayName()}: ${missing.join(", ")}`;

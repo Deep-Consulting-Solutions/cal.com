@@ -29,11 +29,14 @@ import type { WebhookTriggerEvents } from "@calcom/prisma/enums";
 import { BookingStatus, MembershipRole, WorkflowMethods } from "@calcom/prisma/enums";
 import { credentialForCalendarServiceSelect } from "@calcom/prisma/selects/credential";
 import { schemaBookingCancelParams } from "@calcom/prisma/zod-utils";
+import {
+  CACHE_REFRESH_REASON_ENUM,
+  refreshAvailableSlotsCache,
+} from "@calcom/trpc/server/routers/viewer/slots/util";
 import type { CalendarEvent } from "@calcom/types/Calendar";
 import type { IAbstractPaymentService, PaymentApp } from "@calcom/types/PaymentService";
 
 import cancelAttendeeSeat from "./handleSeats/cancel/cancelAttendeeSeat";
-import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "@calcom/trpc/server/routers/viewer/slots/util";
 
 async function getBookingToDelete(id: number | undefined, uid: string | undefined) {
   return await prisma.booking.findUnique({
@@ -631,11 +634,11 @@ async function handler(req: CustomRequest) {
 
     // no need to await, this should complete in the background
     refreshAvailableSlotsCache(
-      CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED, 
-      [bookingToDelete.userId], 
-      bookingToDelete?.startTime || '',
-      bookingToDelete?.endTime || ''
-    )
+      CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED,
+      [bookingToDelete.userId],
+      bookingToDelete?.startTime || "",
+      bookingToDelete?.endTime || ""
+    );
     // We skip the deletion of the event, because that would also delete the payment reference, which we should keep
     try {
       await apiDeletes;
@@ -676,11 +679,11 @@ async function handler(req: CustomRequest) {
 
   // No need to wait for this, it is a background process and has its try catch
   refreshAvailableSlotsCache(
-    CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED, 
-    [bookingToDelete.userId], 
-    bookingToDelete?.startTime || '',
-    bookingToDelete?.endTime || ''
-  )
+    CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED,
+    [bookingToDelete.userId],
+    bookingToDelete?.startTime || "",
+    bookingToDelete?.endTime || ""
+  );
 
   try {
     const temp = prismaPromises.concat(apiDeletes);

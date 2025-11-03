@@ -7,7 +7,6 @@ import type { PrismaClient } from "@calcom/prisma";
 import { schemaEventTypeReadPublic } from "../../lib/validations/event-type";
 import { schemaQuerySlug } from "../../lib/validations/shared/querySlug";
 import { schemaQuerySingleOrMultipleUserIds } from "../../lib/validations/shared/queryUserId";
-
 import getCalLink from "./_utils/getCalLink";
 
 /**
