@@ -135,7 +135,7 @@ export default class ZohoCalendarService implements Calendar {
     // });
 
     // Skip cache if caching is disabled
-    const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true';
+    const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === "true";
 
     let response: any = !isCacheDisabled ? userInfoStore[calendarID] : undefined;
 
@@ -376,11 +376,10 @@ export default class ZohoCalendarService implements Calendar {
     const busyDataKey = `${dateFrom.split("T")[0]}_${dateTo.split("T")[0]}_${userEmail}`;
 
     // Skip cache if caching is disabled
-    const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true';
+    const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === "true";
 
-    const freeBusyUserDataAtKey = !isCacheDisabled && !!freeBusyStore[callUserID]
-      ? freeBusyStore[callUserID][busyDataKey]
-      : undefined;
+    const freeBusyUserDataAtKey =
+      !isCacheDisabled && !!freeBusyStore[callUserID] ? freeBusyStore[callUserID][busyDataKey] : undefined;
     let response = !!freeBusyUserDataAtKey ? freeBusyUserDataAtKey.response : undefined;
     if (!response || (!!response && skipCache)) {
       // const cachedResponse = await redis.get(busyDataKey);
@@ -645,7 +644,7 @@ export default class ZohoCalendarService implements Calendar {
 
 const refreshZohoFreeBusyData = async () => {
   // Skip refresh if caching is disabled
-  if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true') {
+  if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === "true") {
     return;
   }
 
@@ -686,7 +685,7 @@ const refreshZohoFreeBusyData = async () => {
 };
 
 // Skip periodic refresh if caching is disabled
-if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== "true") {
   setInterval(() => {
     refreshZohoFreeBusyData();
   }, Number(process.env.FREE_BUSY_CACHE_TTL_SECONDS || 20 * 1000));

@@ -11,7 +11,6 @@ import { TRPCError } from "@trpc/server";
 import { getHTTPStatusCodeFromError } from "@trpc/server/http";
 
 import { withMiddleware } from "../../../lib/helpers/withMiddleware";
-
 import authMiddleware, { checkPermissions } from "./_auth-middleware";
 
 const patchHandler = async (req: NextApiRequest, res: NextApiResponse) => {

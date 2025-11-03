@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-restricted-imports
+import { stringify, parse } from "flatted";
 import { chunk, countBy } from "lodash";
 import { v4 as uuid } from "uuid";
-import { stringify, parse } from 'flatted';
 
 import { getAggregatedAvailability } from "@calcom/core/getAggregatedAvailability";
 import { getBusyTimesForLimitChecks } from "@calcom/core/getBusyTimes";
@@ -28,11 +28,10 @@ import type { EventBusyDate } from "@calcom/types/Calendar";
 
 import { TRPCError } from "@trpc/server";
 
-import type { GetScheduleOptions } from "./getSchedule.handler";
-import type { TGetScheduleInputSchema } from "./getSchedule.schema";
 import { redis } from "../../../../../esa/lib/redis";
 import { freeBusyStore, responseStore, ResponseStoreKeyData } from "../../../../../esa/store/store";
-
+import type { GetScheduleOptions } from "./getSchedule.handler";
+import type { TGetScheduleInputSchema } from "./getSchedule.schema";
 
 export const checkIfIsAvailable = ({
   time,
@@ -299,26 +298,37 @@ function applyOccupiedSeatsToCurrentSeats(currentSeats: CurrentSeats, occupiedSe
   return currentSeats;
 }
 
-const getAvailableSlotsCacheKeyPrefix = 'getAvailableSlotsCache_';
+const getAvailableSlotsCacheKeyPrefix = "getAvailableSlotsCache_";
 
 export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypassCacheResponse = false) {
   // check the cache for a response with this timezone
-  const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${input.eventTypeId || ''}_${input.eventTypeSlug || ''}`;
+  const cacheKey = `${getAvailableSlotsCacheKeyPrefix}${input.timeZone}_${input.startTime}_${input.endTime}_${
+    input.eventTypeId || ""
+  }_${input.eventTypeSlug || ""}`;
 
   // Skip cache read if caching is disabled
-  const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true';
+  const isCacheDisabled = process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === "true";
 
-  if(!isCacheDisabled && ((!input.rescheduleUid) && !bypassCacheResponse  || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true' && !bypassCacheResponse))){
+  if (
+    !isCacheDisabled &&
+    ((!input.rescheduleUid && !bypassCacheResponse) ||
+      (!!input.rescheduleUid &&
+        process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === "true" &&
+        !bypassCacheResponse))
+  ) {
     const responseDetails = responseStore[cacheKey];
-    if(responseDetails){
+    if (responseDetails) {
       // const responseDetails: any = parse(response);
-      return (responseDetails.response) as {
-        slots: Record<string, {
+      return responseDetails.response as {
+        slots: Record<
+          string,
+          {
             time: string;
             attendees?: number | undefined;
             bookingUid?: string | undefined;
-        }[]>;
-    };
+          }[]
+        >;
+      };
     }
   }
   const orgDetails = orgDomainConfig(ctx?.req);
@@ -510,7 +520,7 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
     currentSeats,
   };
 
-  const isTimeWithinBounds = (_time: Parameters<typeof isTimeOutOfBounds>[0]) =>{ 
+  const isTimeWithinBounds = (_time: Parameters<typeof isTimeOutOfBounds>[0]) => {
     const isTimeWithinBounds = !isTimeOutOfBounds(_time, {
       periodType: eventType.periodType,
       periodStartDate: eventType.periodStartDate,
@@ -518,9 +528,9 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
       periodCountCalendarDays: eventType.periodCountCalendarDays,
       periodDays: eventType.periodDays,
     });
-    console.log({_time, isTimeWithinBounds})
+    console.log({ _time, isTimeWithinBounds });
     return isTimeWithinBounds;
-  }
+  };
 
   const getSlotsTime = 0;
   const checkForAvailabilityTime = 0;
@@ -677,7 +687,11 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
   loggerWithEventDetails.debug(`Available slots: ${JSON.stringify(computedAvailableSlots)}`);
 
   // Skip cache write if caching is disabled
-  if(!isCacheDisabled && ((!input.rescheduleUid) || ( !!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === 'true'))){
+  if (
+    !isCacheDisabled &&
+    (!input.rescheduleUid ||
+      (!!input.rescheduleUid && process.env.AVAILABLE_SLOTS_CACHE_ON_RESCHEDULE === "true"))
+  ) {
     // store the response for a particular computation, it will then keep refreshing itself until it end date passes
     const responseDataToCache: {
       response: any;
@@ -687,17 +701,17 @@ export async function getAvailableSlots({ input, ctx }: GetScheduleOptions, bypa
       dateFrom: string;
       dateTo: string;
       eventTypeSlug: string;
-  } = {
+    } = {
       input,
       ctx,
       userIDs: allUserIds,
       response: {
-      slots: computedAvailableSlots,
+        slots: computedAvailableSlots,
       },
       dateFrom: input.startTime,
       dateTo: input.endTime,
-      eventTypeSlug: input.eventTypeSlug || ''
-    }
+      eventTypeSlug: input.eventTypeSlug || "",
+    };
     responseStore[cacheKey] = responseDataToCache;
     await redis.set(cacheKey, stringify(responseDataToCache));
   }
@@ -737,20 +751,20 @@ async function getTeamIdFromSlug(
   return team?.id;
 }
 
-export enum CACHE_REFRESH_REASON_ENUM  {
-  EVENT_UPDATED = 'EVENT_UPDATED',
-  MEETING_BOOKED = 'MEETING_BOOKED',
-  EXTERNAL_CALENDAR_UPDATE = 'EXTERNAL_CALENDAR_UPDATE'
+export enum CACHE_REFRESH_REASON_ENUM {
+  EVENT_UPDATED = "EVENT_UPDATED",
+  MEETING_BOOKED = "MEETING_BOOKED",
+  EXTERNAL_CALENDAR_UPDATE = "EXTERNAL_CALENDAR_UPDATE",
 }
 
 export const refreshAvailableSlotsCache = async (
   cacheRefeshReason: CACHE_REFRESH_REASON_ENUM = CACHE_REFRESH_REASON_ENUM.EXTERNAL_CALENDAR_UPDATE,
   userIDs?: (string | number)[],
   startTime?: string | Date,
-  endTime?: string | Date,
+  endTime?: string | Date
 ) => {
   // Skip all cache refresh operations if caching is disabled
-  if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === 'true') {
+  if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE === "true") {
     return;
   }
 
@@ -759,86 +773,101 @@ export const refreshAvailableSlotsCache = async (
 
     const delay10millisecs = async () => {
       await new Promise((resolve, reject) => {
-        setTimeout(()=>{
+        setTimeout(() => {
           resolve(true);
-        }, 10)
-      })
+        }, 10);
+      });
       return;
-    }
-    const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE|| 20));
+    };
+    const batchedKeysArr = chunk(allKeys, Number(process.env.AVAILABLE_SLOTS_CACHE_CHUNK_SIZE || 20));
     for (const batchedKeys of batchedKeysArr) {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataToRefresh = responseStore[getAvailableSlotsCacheKey];
           // Check if the users have their data on Zohocalendar or on cal changed, if not do not refresh
-          // ///////// Make sure to add a small wait with Promise so that control can be handed over to the request handlers  
+          // ///////// Make sure to add a small wait with Promise so that control can be handed over to the request handlers
           // ///////// to respond to requests quickly.
-          if (dataToRefresh){
+          if (dataToRefresh) {
             let changedCalendarAvailabilities: {
               dateFrom: string | Date;
               dateTo: string | Date;
             }[] = [];
-            let shouldRefreshBecauseUserAvailabilityInCalWasUpdated = false; 
-            if(cacheRefeshReason === CACHE_REFRESH_REASON_ENUM.EXTERNAL_CALENDAR_UPDATE){
-              dataToRefresh.userIDs.forEach(userID => {
-                const userChangedAvailabilities = Object.values(freeBusyStore[userID] || {}).filter((avail)=> avail.changed);
-                changedCalendarAvailabilities = [...changedCalendarAvailabilities, ...userChangedAvailabilities];
+            let shouldRefreshBecauseUserAvailabilityInCalWasUpdated = false;
+            if (cacheRefeshReason === CACHE_REFRESH_REASON_ENUM.EXTERNAL_CALENDAR_UPDATE) {
+              dataToRefresh.userIDs.forEach((userID) => {
+                const userChangedAvailabilities = Object.values(freeBusyStore[userID] || {}).filter(
+                  (avail) => avail.changed
+                );
+                changedCalendarAvailabilities = [
+                  ...changedCalendarAvailabilities,
+                  ...userChangedAvailabilities,
+                ];
               });
             } else if (cacheRefeshReason === CACHE_REFRESH_REASON_ENUM.MEETING_BOOKED) {
               // check if the users in the booked meeting are related to the users in this cache
-              const isCachedDataForUserInBookedMeeting = dataToRefresh.userIDs.some(userID => userIDs?.map(us => Number(us)).includes(userID))
-              if(!isCachedDataForUserInBookedMeeting){
+              const isCachedDataForUserInBookedMeeting = dataToRefresh.userIDs.some((userID) =>
+                userIDs?.map((us) => Number(us)).includes(userID)
+              );
+              if (!isCachedDataForUserInBookedMeeting) {
                 // wait 10 milliseconds before continuing
                 await delay10millisecs();
                 return;
               }
-              console.log(`About to refresh response cache for ${getAvailableSlotsCacheKey}, meeting booked`)
+              console.log(`About to refresh response cache for ${getAvailableSlotsCacheKey}, meeting booked`);
               changedCalendarAvailabilities = [
                 {
-                  dateFrom: startTime || '',
-                  dateTo: endTime || '',
-                }
-              ]
+                  dateFrom: startTime || "",
+                  dateTo: endTime || "",
+                },
+              ];
             } else if (cacheRefeshReason === CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED) {
-              shouldRefreshBecauseUserAvailabilityInCalWasUpdated = dataToRefresh.userIDs.some(userID => userIDs?.map(us => Number(us)).includes(userID));    
-              console.log(`About to refresh response cache, user availability changed ${getAvailableSlotsCacheKey}`)
+              shouldRefreshBecauseUserAvailabilityInCalWasUpdated = dataToRefresh.userIDs.some((userID) =>
+                userIDs?.map((us) => Number(us)).includes(userID)
+              );
+              console.log(
+                `About to refresh response cache, user availability changed ${getAvailableSlotsCacheKey}`
+              );
             }
-            
-            
+
             // Should refresh if data is in the range + or - 2 days of the changed data
-            const startDateToUseInChecks = dayjs(dataToRefresh.dateFrom).subtract(2, 'days');
-            const endDateToUseInChecks = dayjs(dataToRefresh.dateTo).add(2, 'days');
-            
-            const shouldRefreshCacheForKey = changedCalendarAvailabilities.some((changedAvailabilityRange) => {
-              const changedAvailabilityStartTime = dayjs(changedAvailabilityRange.dateFrom);
-              const changedAvailabilityEndTime = dayjs(changedAvailabilityRange.dateTo);
+            const startDateToUseInChecks = dayjs(dataToRefresh.dateFrom).subtract(2, "days");
+            const endDateToUseInChecks = dayjs(dataToRefresh.dateTo).add(2, "days");
 
-              return changedAvailabilityStartTime.isBetween(
-                startDateToUseInChecks,
-                endDateToUseInChecks,
-                'milliseconds',
-                "[]"
-              ) || changedAvailabilityEndTime.isBetween(
-                startDateToUseInChecks,
-                endDateToUseInChecks,
-                'milliseconds',
-                "[]"
-              )
-            })
+            const shouldRefreshCacheForKey = changedCalendarAvailabilities.some(
+              (changedAvailabilityRange) => {
+                const changedAvailabilityStartTime = dayjs(changedAvailabilityRange.dateFrom);
+                const changedAvailabilityEndTime = dayjs(changedAvailabilityRange.dateTo);
 
-            if(shouldRefreshCacheForKey || shouldRefreshBecauseUserAvailabilityInCalWasUpdated){
+                return (
+                  changedAvailabilityStartTime.isBetween(
+                    startDateToUseInChecks,
+                    endDateToUseInChecks,
+                    "milliseconds",
+                    "[]"
+                  ) ||
+                  changedAvailabilityEndTime.isBetween(
+                    startDateToUseInChecks,
+                    endDateToUseInChecks,
+                    "milliseconds",
+                    "[]"
+                  )
+                );
+              }
+            );
+
+            if (shouldRefreshCacheForKey || shouldRefreshBecauseUserAvailabilityInCalWasUpdated) {
               // check if end time has passed and remove the item from cache else, refresh it
               // TODO_ESA: this logic may need to be modified to have a better cache clearing strategy
-              if(new Date() < new Date(dataToRefresh.input.endTime)){
-                console.log(`Refreshing response cache for user ${getAvailableSlotsCacheKey}`)
+              if (new Date() < new Date(dataToRefresh.input.endTime)) {
+                console.log(`Refreshing response cache for user ${getAvailableSlotsCacheKey}`);
                 await getAvailableSlots(dataToRefresh, true);
-              } else{
+              } else {
                 delete responseStore[getAvailableSlotsCacheKey];
                 // wait 10 milliseconds before continuing
                 await delay10millisecs();
-              } 
+              }
             } else {
-              console.log(`Skipped refreshing response cache for user ${getAvailableSlotsCacheKey}`)
+              console.log(`Skipped refreshing response cache for user ${getAvailableSlotsCacheKey}`);
               // wait 10 milliseconds before continuing
               await delay10millisecs();
             }
@@ -854,29 +883,27 @@ export const refreshAvailableSlotsCache = async (
   } catch (error) {
     // TODO_ESA: Add incident reporting here when cache refresh fails
     console.log(`error in refreshAvailableSlotsCache`, error);
-  } 
-}
+  }
+};
 
 // Skip periodic refresh if caching is disabled
-if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
-  setInterval(()=>{
-    refreshAvailableSlotsCache()
-  }, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 8*1000))
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== "true") {
+  setInterval(() => {
+    refreshAvailableSlotsCache();
+  }, Number(process.env.AVAILABLE_SLOTS_CACHE_REFRESH_INTERVAL_MILLIS || 8 * 1000));
 }
-
-
 
 const initResponseStore = async () => {
   try {
     const allKeys = await redis.keys(`${getAvailableSlotsCacheKeyPrefix}*`);
 
-    const batchedKeysArr = chunk(allKeys, Number( process.env.AVAILABLE_SLOTS_INIT_CACHE_CHUNK_SIZE|| 3));
+    const batchedKeysArr = chunk(allKeys, Number(process.env.AVAILABLE_SLOTS_INIT_CACHE_CHUNK_SIZE || 3));
     for (const batchedKeys of batchedKeysArr) {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataInStore = await redis.get(getAvailableSlotsCacheKey);
-          if(dataInStore){
-            const responseStoreOldData = (parse(dataInStore)) as ResponseStoreKeyData;
+          if (dataInStore) {
+            const responseStoreOldData = parse(dataInStore) as ResponseStoreKeyData;
             await getAvailableSlots(responseStoreOldData, true);
           }
         })
@@ -885,9 +912,8 @@ const initResponseStore = async () => {
   } catch (error) {
     // TODO_ESA: Add incident reporting here when cache refresh fails
     console.log(`error in initResponseStore`, error);
-  } 
-}
-
+  }
+};
 
 const clearResponseStoreInRedis = async () => {
   try {
@@ -898,7 +924,7 @@ const clearResponseStoreInRedis = async () => {
       await Promise.all(
         batchedKeys.map(async (getAvailableSlotsCacheKey: any) => {
           const dataInStore = await redis.get(getAvailableSlotsCacheKey);
-          if(dataInStore){
+          if (dataInStore) {
             await redis.del(getAvailableSlotsCacheKey);
           }
         })
@@ -907,16 +933,16 @@ const clearResponseStoreInRedis = async () => {
   } catch (error) {
     // TODO_ESA: Add incident reporting here when cache refresh fails
     console.log(`error in initResponseStore`, error);
-  } 
-}
+  }
+};
 
 // Skip cache initialization if caching is disabled
-if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== 'true') {
-  setTimeout(()=>{
-    if(process.env.DELETE_RESPONSE_STORE_IN_REDIS === 'true'){
+if (process.env.SKIP_CUSTOM_IN_MEMORY_CACHE !== "true") {
+  setTimeout(() => {
+    if (process.env.DELETE_RESPONSE_STORE_IN_REDIS === "true") {
       clearResponseStoreInRedis();
     } else {
       initResponseStore();
     }
-  }, 0)
+  }, 0);
 }

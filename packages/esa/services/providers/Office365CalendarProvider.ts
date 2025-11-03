@@ -251,7 +251,6 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
           data: {
             name: params.schedule.name,
             timeZone: params.schedule.timeZone,
-            availability: params.schedule.availability as any,
           },
         });
       }
@@ -305,7 +304,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
   }
 
   async generateOAuthUrl(userId: string, managedSetupId?: number): Promise<string> {
-    const appKeys = (await getAppKeysFromSlug("office365-calendar")) as Office365Keys;
+    const appKeys = (await getAppKeysFromSlug("office365-calendar")) as unknown as Office365Keys;
     const { WEBAPP_URL } = process.env;
 
     const tenantId = appKeys.tenant_id || "common";

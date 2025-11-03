@@ -84,7 +84,7 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
 
     const setupMap = new Map(managedSetups.map((setup) => [setup.zuid, setup]));
 
-    return (zohoUsers.users || []).map((zohoUser) => {
+    return (zohoUsers.users || []).map((zohoUser: any) => {
       const setup = setupMap.get(zohoUser.zuid);
       const hasZohoMail = mailAccounts.includes(zohoUser.email);
 
@@ -192,12 +192,12 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
           zuid: params.userId,
           userId: user.id,
           status: "Pending Completion",
-          zoomUserId: params.zoomUserId,
+          zoomUserId: params.zoomUserId || "",
         },
         update: {
           userId: user.id,
           status: "Pending Completion",
-          zoomUserId: params.zoomUserId,
+          zoomUserId: params.zoomUserId || "",
         },
       });
 
@@ -239,10 +239,10 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
         include: { user: true },
       });
 
-      if (!setup) {
+      if (!setup || !setup.userId) {
         return {
           success: false,
-          error: "Setup not found",
+          error: "Setup not found or user not associated",
         };
       }
 
@@ -253,7 +253,6 @@ export class ZohoCalendarProvider extends BaseCalendarProvider {
           data: {
             name: params.schedule.name,
             timeZone: params.schedule.timeZone,
-            availability: params.schedule.availability as any,
           },
         });
       }

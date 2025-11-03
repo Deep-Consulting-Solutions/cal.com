@@ -3,8 +3,8 @@ import { prisma } from "@calcom/prisma";
 import { TRPCError } from "@trpc/server";
 
 import type { TrpcSessionUser } from "../../../../trpc";
-import type { TDeleteInputSchema } from "./delete.schema";
 import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "../../slots/util";
+import type { TDeleteInputSchema } from "./delete.schema";
 
 type DeleteOptions = {
   ctx: {
@@ -60,8 +60,5 @@ export const deleteHandler = async ({ input, ctx }: DeleteOptions) => {
       id: input.scheduleId,
     },
   });
-  refreshAvailableSlotsCache(
-    CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, 
-    [user.id],
-  )
+  refreshAvailableSlotsCache(CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, [user.id]);
 };

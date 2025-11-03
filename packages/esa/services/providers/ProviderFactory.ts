@@ -1,6 +1,6 @@
-import { CalendarProvider, CalendarProviderService } from "./types";
-import { ZohoCalendarProvider } from "./ZohoCalendarProvider";
 import { Office365CalendarProvider } from "./Office365CalendarProvider";
+import { ZohoCalendarProvider } from "./ZohoCalendarProvider";
+import { CalendarProvider, CalendarProviderService } from "./types";
 
 export class ProviderFactory {
   private static providers: Map<CalendarProvider, CalendarProviderService> = new Map();
@@ -54,7 +54,9 @@ export class ProviderFactory {
     if (!providerService.isConfigured()) {
       return {
         valid: false,
-        error: providerService.getConfigurationError() || `${providerService.getDisplayName()} is not properly configured`,
+        error:
+          providerService.getConfigurationError() ||
+          `${providerService.getDisplayName()} is not properly configured`,
       };
     }
 

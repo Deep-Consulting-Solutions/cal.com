@@ -41,7 +41,7 @@ function isOutOfBounds(
     periodCountCalendarDays,
     periodStartDate,
     periodEndDate,
-  })
+  });
 
   switch (periodType) {
     case PeriodType.ROLLING: {
@@ -56,11 +56,11 @@ function isOutOfBounds(
       const periodRangeEndDay = dayjs(periodEndDate).utcOffset(date.utcOffset()).endOf("day");
 
       console.log({
-        periodRangeStartDay, 
+        periodRangeStartDay,
         periodRangeEndDay,
         isBefore: date.endOf("day").isBefore(periodRangeStartDay),
-        isAfter: date.endOf("day").isAfter(periodRangeEndDay)
-      })
+        isAfter: date.endOf("day").isAfter(periodRangeEndDay),
+      });
 
       return date.endOf("day").isBefore(periodRangeStartDay) || date.endOf("day").isAfter(periodRangeEndDay);
     }

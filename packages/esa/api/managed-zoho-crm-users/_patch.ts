@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextApiRequest } from "next";
+
 import { defaultResponder } from "@calcom/lib/server";
+
 import { patchHandler as genericPatchHandler } from "../managed-calendar-users/_patch";
 
 /**

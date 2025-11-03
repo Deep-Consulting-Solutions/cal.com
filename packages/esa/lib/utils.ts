@@ -1,5 +1,5 @@
-import { sendMail } from "./mailer";
 import { setupCalendarOauthEmail } from "../emails/setupCalendarOauthEmail";
+import { sendMail } from "./mailer";
 
 interface SendCalendarSetupEmailParams {
   to: string;

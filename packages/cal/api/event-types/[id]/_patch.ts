@@ -6,11 +6,13 @@ import { HttpError } from "@calcom/lib/http-error";
 import { defaultResponder } from "@calcom/lib/server";
 import { SchedulingType } from "@calcom/prisma/enums";
 
-import type { schemaEventTypeBaseBodyParams } from "../../../lib/validations/event-type";
-import { schemaEventTypeEditBodyParams, schemaEventTypeReadPublic } from "../../../lib/validations/event-type";
-import { schemaQueryIdParseInt } from "../../../lib/validations/shared/queryIdTransformParseInt";
 import ensureOnlyMembersAsHosts from "../../../api/event-types/_utils/ensureOnlyMembersAsHosts";
-
+import type { schemaEventTypeBaseBodyParams } from "../../../lib/validations/event-type";
+import {
+  schemaEventTypeEditBodyParams,
+  schemaEventTypeReadPublic,
+} from "../../../lib/validations/event-type";
+import { schemaQueryIdParseInt } from "../../../lib/validations/shared/queryIdTransformParseInt";
 import checkTeamEventEditPermission from "../_utils/checkTeamEventEditPermission";
 
 /**

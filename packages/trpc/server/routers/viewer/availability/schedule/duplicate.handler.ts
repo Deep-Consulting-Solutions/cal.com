@@ -5,8 +5,8 @@ import { prisma } from "@calcom/prisma";
 import { TRPCError } from "@trpc/server";
 
 import type { TrpcSessionUser } from "../../../../trpc";
-import type { TScheduleDuplicateSchema } from "./duplicate.schema";
 import { CACHE_REFRESH_REASON_ENUM, refreshAvailableSlotsCache } from "../../slots/util";
+import type { TScheduleDuplicateSchema } from "./duplicate.schema";
 
 type DuplicateScheduleOptions = {
   ctx: {
@@ -64,10 +64,7 @@ export const duplicateHandler = async ({ ctx, input }: DuplicateScheduleOptions)
       data,
     });
 
-    refreshAvailableSlotsCache(
-      CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, 
-      [user.id]
-    )
+    refreshAvailableSlotsCache(CACHE_REFRESH_REASON_ENUM.EVENT_UPDATED, [user.id]);
 
     return { schedule: newSchedule };
   } catch (error) {
