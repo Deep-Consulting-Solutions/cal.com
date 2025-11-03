@@ -188,6 +188,8 @@ const zoomAuth = (credential: CredentialPayload) => {
         account_id: accountId,
       }),
     });
+    // console.log("zoom token response", await response.json());
+    // console.log("response status", response.status);
 
     const responseBody: { access_token: string; expires_in: number } = await handleZoomResponse(response);
     await redis.setex(cacheKey, responseBody.expires_in - 1, responseBody.access_token);

@@ -93,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // In some cases, graphUser.mail is null. Then graphUser.userPrincipalName most likely contains the email address.
   responseBody.email = graphUser.mail ?? graphUser.userPrincipalName;
   responseBody.expiry_date = Math.round(+new Date() / 1000 + responseBody.expires_in); // set expiry date in seconds
-  delete responseBody.expires_in;
+  // Keep expires_in for CalendarService compatibility - don't delete it
 
   // Set the isDefaultCalendar as selectedCalendar
   // If a user has multiple calendars, keep on making calls until we find the default calendar
@@ -111,8 +111,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     let calBody = await handleErrorsJson<{ value: OfficeCalendar[]; "@odata.nextLink"?: string }>(calRequest);
 
-    if (typeof responseBody === "string") {
-      calBody = JSON.parse(responseBody) as { value: OfficeCalendar[] };
+    if (typeof calBody === "string") {
+      calBody = JSON.parse(calBody) as { value: OfficeCalendar[] };
     }
 
     const findDefaultCalendar = calBody.value.find((calendar) => calendar.isDefaultCalendar);
@@ -184,6 +184,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Create destination calendar for managed setup users
       if (fromManagedSetup) {
+        console.log("[OFFICE365-CALLBACK] Creating DestinationCalendar", {
+          userId,
+          integration: "office365_calendar",
+          externalId: defaultCalendar.id,
+          credentialId: credential.id,
+          primaryEmail: responseBody.email,
+          defaultCalendar,
+        });
+
         await prisma.destinationCalendar.upsert({
           where: { userId },
           create: {
