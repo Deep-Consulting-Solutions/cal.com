@@ -316,7 +316,7 @@ export class Office365CalendarProvider extends BaseCalendarProvider {
           managedSetupId,
           userId: parseInt(userId),
           managedSetupReturnTo: `${WEBAPP_URL}/api/esa/setup-complete`,
-          onErrorReturnTo: `${WEBAPP_URL}/api/esa/setup-complete`,
+          onErrorReturnTo: `${WEBAPP_URL}/api/esa/setup-error`,
         }
       : { userId: parseInt(userId) };
 
