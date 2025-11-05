@@ -87,6 +87,7 @@ const zoomTokenSchema = z.object({
   access_token: z.string(),
   refresh_token: z.string(),
   user_id: z.string().optional(),
+  zoomUserId: z.string().optional(),
 });
 
 type ZoomToken = z.infer<typeof zoomTokenSchema>;
