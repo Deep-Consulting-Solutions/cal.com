@@ -28,6 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   console.log("[OFFICE365-CALLBACK] Handler started", {
     hasCode: !!code,
+    code,
     state,
     sessionUserId: req.session?.user?.id,
   });
